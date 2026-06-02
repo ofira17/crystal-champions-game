@@ -1351,11 +1351,19 @@ function ArenaPageContent() {
         }
       }
 
-      // Smooth toward desired velocity
-      s.vx = s.vx + (dvx - s.vx) * Math.min(1, dt * 5);
-      s.vy = s.vy + (dvy - s.vy) * Math.min(1, dt * 5);
-      s.x += s.vx * dt;
-      s.y += s.vy * dt;
+      // Pause/freeze enemy while the question is open or the result is being
+      // processed. Movement only progresses during the actual battle phase, so
+      // the enemy doesn't drift around while the child is reading the question.
+      if (phase === "battle") {
+        s.vx = s.vx + (dvx - s.vx) * Math.min(1, dt * 5);
+        s.vy = s.vy + (dvy - s.vy) * Math.min(1, dt * 5);
+        s.x += s.vx * dt;
+        s.y += s.vy * dt;
+      } else {
+        // smooth halt
+        s.vx *= 0.85;
+        s.vy *= 0.85;
+      }
 
       // Hard personal-space clamp — never let the enemy stand on the hero's body.
       // Uses the same KEEP_DIST so each archetype keeps its own comfortable distance.
@@ -1403,11 +1411,13 @@ function ArenaPageContent() {
         // child rotates via React (we re-render at low rate via enemyTick)
       }
 
-      // Contact detection — only during battle phase, not while another shot is in flight
-      if (phase === "battle" && !isPending && !bossDefeated) {
-        if (dist < 9 && now - lastContactRef.current > 800) {
+      // Auto-open question on FIRST contact with the enemy's personal-space ring.
+      // No Enter, no click, no wait — the moment the enemy reaches the hero, the
+      // question opens. handleFireCrystal early-returns if phase !== "battle", so
+      // re-entries during challenge/shooting/feedback are naturally suppressed.
+      if (phase === "battle" && !isPending && !bossDefeated && age > 0.5) {
+        if (dist <= KEEP_DIST_CLAMP + 1.5 && now - lastContactRef.current > 400) {
           lastContactRef.current = now;
-          // trigger challenge through the existing fire path
           handleFireCrystalRef.current?.();
         }
       }
