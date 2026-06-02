@@ -2,21 +2,17 @@
 
 import React from "react";
 
-// ── Enemy archetypes ──────────────────────────────────────────────────────────
-// Four visually distinct enemies. Each SVG has a unique silhouette so the player
-// can tell them apart at a glance — not just recolors of the same blob.
-//
-// Each SVG is drawn with the "front" pointing UP (negative Y); the arena
-// rotates the wrapper so the enemy faces the hero.
 export type EnemyVariant = "goblin" | "bat" | "giant" | "wizard";
 
 export const ENEMY_VARIANTS: EnemyVariant[] = ["goblin", "bat", "giant", "wizard"];
 
-const VARIANT_META: Record<EnemyVariant, { nameHe: string; glow: string; size: number; src: string }> = {
-  goblin: { nameHe: "גובלין השאלות",  glow: "rgba(74, 222, 128, 0.75)",  size: 160, src: "/enemies/question-goblin-idle.png" },
-  bat:    { nameHe: "עטלף הטעויות",   glow: "rgba(167, 139, 250, 0.80)", size: 170, src: "/enemies/mistake-bat-idle.png" },
-  giant:  { nameHe: "ענק הזיכרון",     glow: "rgba(251, 113,  30, 0.90)", size: 220, src: "/enemies/memory-giant-idle.png" },
-  wizard: { nameHe: "קוסם הבלבול",     glow: "rgba(168, 85, 247, 0.85)",  size: 180, src: "/enemies/confusion-wizard-idle.png" },
+type DirKey = 1 | 2 | 3 | 4 | 5;
+
+const VARIANT_META: Record<EnemyVariant, { nameHe: string; glow: string; size: number; slug: string }> = {
+  goblin: { nameHe: "גובלין השאלות",  glow: "rgba(74, 222, 128, 0.75)",  size: 160, slug: "question-goblin" },
+  bat:    { nameHe: "עטלף הטעויות",   glow: "rgba(167, 139, 250, 0.80)", size: 170, slug: "mistake-bat" },
+  giant:  { nameHe: "ענק הזיכרון",     glow: "rgba(251, 113,  30, 0.90)", size: 220, slug: "memory-giant" },
+  wizard: { nameHe: "קוסם הבלבול",     glow: "rgba(168, 85, 247, 0.85)",  size: 180, slug: "confusion-wizard" },
 };
 
 function worldToVariant(worldId: string | null): EnemyVariant {
@@ -34,11 +30,20 @@ export function getEnemyName(worldId: string | null): string {
 }
 
 export function getEnemyMeta(variant: EnemyVariant) {
-  return VARIANT_META[variant];
+  const m = VARIANT_META[variant];
+  return { ...m, src: `/enemies/${m.slug}-1.png` };
 }
 
+// facingDeg convention from arena: angle measured from "up" (0 = up, 180 = down,
+// 90 = right, -90/270 = left). Map to (1) front, (2) right, (3) left, (4) back.
+function dirFromFacing(facingDeg: number): DirKey {
+  const a = ((facingDeg % 360) + 360) % 360; // 0..360
+  if (a >= 315 || a < 45) return 4;        // up   → back
+  if (a >= 45  && a < 135) return 2;       // right
+  if (a >= 135 && a < 225) return 1;       // down → front (facing viewer/hero)
+  return 3;                                // left
+}
 
-// ── Main export — single SVG enemy oriented toward hero ───────────────────────
 export interface CrystalEnemyProps {
   worldId?:    string | null;
   variant?:    EnemyVariant;
@@ -46,8 +51,9 @@ export interface CrystalEnemyProps {
   damaged?:    boolean;
   hp?:         number;
   showName?:   boolean;
-  facingDeg?:  number; // rotation in degrees so enemy faces hero (0 = facing up)
-  animPhase?:  number; // 0..1 for wing-flap / stomp / teleport
+  facingDeg?:  number;
+  animPhase?:  number;
+  attacking?:  boolean;
 }
 
 export function CrystalEnemy({
@@ -57,12 +63,16 @@ export function CrystalEnemy({
   damaged   = false,
   hp        = 100,
   showName  = true,
-  facingDeg = 0,
+  facingDeg = 180,
   animPhase = 0,
+  attacking = false,
 }: CrystalEnemyProps) {
   const v    = variant ?? worldToVariant(worldId);
   const meta = VARIANT_META[v];
   const px   = size ?? meta.size;
+
+  const dir: DirKey = attacking || animPhase > 0.85 ? 5 : dirFromFacing(facingDeg);
+  const src = `/enemies/${meta.slug}-${dir}.png`;
 
   const lowHp = hp <= 30;
   const dropShadow = damaged
@@ -71,9 +81,7 @@ export function CrystalEnemy({
     ? `drop-shadow(0 0 14px rgba(255,80,80,0.7)) drop-shadow(0 0 20px ${meta.glow})`
     : `drop-shadow(0 0 18px ${meta.glow}) drop-shadow(0 2px 6px rgba(0,0,0,0.55))`;
 
-  const flap = Math.sin(animPhase * Math.PI * 2);
   const bob = Math.sin(animPhase * Math.PI * 2) * 4;
-  void flap;
 
   return (
     <div className="flex flex-col items-center gap-1 select-none">
@@ -86,13 +94,12 @@ export function CrystalEnemy({
           filter: dropShadow,
           opacity: Math.max(0.15, hp / 100),
           transition: "filter 0.2s ease, opacity 0.4s ease",
-          transform: `rotate(${facingDeg}deg)`,
           transformOrigin: "center center",
-          willChange: "transform, filter",
+          willChange: "filter",
         }}
       >
         <img
-          src={meta.src}
+          src={src}
           alt={meta.nameHe}
           draggable={false}
           style={{
@@ -113,7 +120,6 @@ export function CrystalEnemy({
           style={{
             color: "rgba(255,200,200,0.9)",
             textShadow: "0 0 8px rgba(255,0,0,0.4)",
-            transform: `rotate(${-facingDeg}deg)`,
           }}
         >
           {meta.nameHe}
