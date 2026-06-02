@@ -13,10 +13,10 @@ export type EnemyVariant = "goblin" | "bat" | "giant" | "wizard";
 export const ENEMY_VARIANTS: EnemyVariant[] = ["goblin", "bat", "giant", "wizard"];
 
 const VARIANT_META: Record<EnemyVariant, { nameHe: string; glow: string; size: number; src: string }> = {
-  goblin: { nameHe: "גובלין השאלות",  glow: "rgba(74, 222, 128, 0.75)",  size: 160, src: "/enemies/question-goblin.png" },
-  bat:    { nameHe: "עטלף הטעויות",   glow: "rgba(167, 139, 250, 0.80)", size: 170, src: "/enemies/mistake-bat.png" },
-  giant:  { nameHe: "ענק הזיכרון",     glow: "rgba(251, 113,  30, 0.90)", size: 220, src: "/enemies/memory-giant.png" },
-  wizard: { nameHe: "קוסם הבלבול",     glow: "rgba(168, 85, 247, 0.85)",  size: 180, src: "/enemies/confusion-wizard.png" },
+  goblin: { nameHe: "גובלין השאלות",  glow: "rgba(74, 222, 128, 0.75)",  size: 160, src: "/enemies/question-goblin-idle.png" },
+  bat:    { nameHe: "עטלף הטעויות",   glow: "rgba(167, 139, 250, 0.80)", size: 170, src: "/enemies/mistake-bat-idle.png" },
+  giant:  { nameHe: "ענק הזיכרון",     glow: "rgba(251, 113,  30, 0.90)", size: 220, src: "/enemies/memory-giant-idle.png" },
+  wizard: { nameHe: "קוסם הבלבול",     glow: "rgba(168, 85, 247, 0.85)",  size: 180, src: "/enemies/confusion-wizard-idle.png" },
 };
 
 function worldToVariant(worldId: string | null): EnemyVariant {
