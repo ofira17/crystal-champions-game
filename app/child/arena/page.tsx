@@ -16,7 +16,7 @@ import {
 } from "@/app/actions/arena";
 import { ENERGY_MAX }      from "@/lib/constants";
 import { TreasureBox }     from "@/components/child/TreasureBox";
-import { CrystalEnemy, getEnemyName } from "@/components/child/CrystalEnemy";
+import { CrystalEnemy, getEnemyName, getEnemyVariant, getEnemyMeta, type EnemyVariant } from "@/components/child/CrystalEnemy";
 import { getHeroImage }    from "@/components/child/HeroDisplay";
 
 // ── Phase type ────────────────────────────────────────────────────────────────
@@ -854,14 +854,9 @@ function ArenaPageContent() {
     };
   }, [current]);
 
-  // Enemy idle-drift loop — only when actively in battle, not during shooting/feedback/mega
-  useEffect(() => {
-    if (phase !== "battle" && phase !== "challenge") {
-      if (enemyRafRef.current !== null) cancelAnimationFrame(enemyRafRef.current);
-      enemyRafRef.current = null;
-      setEnemyOffset({ x: 0, y: 0 });
-      return;
-    }
+  // Enemy idle-drift loop — REPLACED by the active-enemy AI further below; kept disabled.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _legacyEnemyDriftDisabled = () => {
     const tick = () => {
       const ai = enemyAiRef.current;
       const t  = (performance.now() - ai.start) / 1000;
@@ -888,7 +883,8 @@ function ArenaPageContent() {
       if (enemyRafRef.current !== null) cancelAnimationFrame(enemyRafRef.current);
       enemyRafRef.current = null;
     };
-  }, [phase]);
+  };
+  void _legacyEnemyDriftDisabled;
 
   // ── Roaming minion system (Brawl-Stars-style live arena) ──────────────────
   type MinionKind = "chaser" | "circler" | "dodger" | "jumper" | "flyer";
@@ -911,7 +907,10 @@ function ArenaPageContent() {
   const heroPosForAiRef = useRef({ x: 50, y: 70 });
 
   // Spawn a minion from outside the arena, heading inward
+  // NOTE: Disabled — replaced by the active enemy archetype system below.
   const spawnMinion = useCallback(() => {
+    return; // disabled
+    // eslint-disable-next-line no-unreachable
     const kinds: MinionKind[] = ["chaser","circler","dodger","jumper","flyer"];
     const kind = kinds[Math.floor(Math.random() * kinds.length)];
     const edge = Math.floor(Math.random() * 4); // 0=top 1=right 2=bottom 3=left
@@ -1096,6 +1095,30 @@ function ArenaPageContent() {
     }
   }
 
+  // ── Active enemy archetype (moves, faces hero, opens question on contact) ──
+  const enemyVariant: EnemyVariant = arenaData
+    ? getEnemyVariant(arenaData.worldId)
+    : "goblin";
+  const enemyVariantRef = useRef<EnemyVariant>(enemyVariant);
+  useEffect(() => { enemyVariantRef.current = enemyVariant; }, [enemyVariant]);
+
+  // Live enemy state, written every frame by the AI loop. Refs avoid re-renders.
+  const enemyStateRef = useRef({
+    x: 50,
+    y: 18,
+    vx: 0,
+    vy: 0,
+    facingDeg: 180, // face down toward hero by default
+    animPhase: 0,
+    teleportCooldown: 0,
+    spawnedAt: performance.now(),
+  });
+  // Mirror to React state at low rate for the SVG (animPhase / variant change)
+  const [enemyTick, setEnemyTick] = useState(0);
+
+  // Contact-throttle so contact doesn't re-trigger during shooting/feedback
+  const lastContactRef = useRef(0);
+
   const [heroPos,         setHeroPos]         = useState({ x: 50, y: 70 });
   const [isHeroMoving,    setIsHeroMoving]    = useState(false);
   const [heroFacingLeft,  setHeroFacingLeft]  = useState(false);
@@ -1190,6 +1213,161 @@ function ArenaPageContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ── Active enemy AI loop (writes transform via ref each frame) ─────────────
+  const enemyAiRafRef = useRef<number | null>(null);
+  // Reset enemy entry point when a new battle/question starts
+  useEffect(() => {
+    if (phase === "battle") {
+      const v = enemyVariantRef.current;
+      // pick a random edge to enter from
+      const edge = Math.floor(Math.random() * 4);
+      let x = 50, y = 18;
+      if (edge === 0)      { x = -8;   y = 25 + Math.random() * 40; }
+      else if (edge === 1) { x = 108;  y = 25 + Math.random() * 40; }
+      else if (edge === 2) { x = 20 + Math.random() * 60; y = -8; }
+      else                 { x = 20 + Math.random() * 60; y = -8; }
+      // bat & wizard prefer aerial entry
+      if (v === "bat" || v === "wizard") y = -8 + Math.random() * 10;
+      enemyStateRef.current.x = x;
+      enemyStateRef.current.y = y;
+      enemyStateRef.current.vx = 0;
+      enemyStateRef.current.vy = 0;
+      enemyStateRef.current.spawnedAt = performance.now();
+      enemyStateRef.current.teleportCooldown = 1.5;
+    }
+  }, [phase, current]);
+
+  useEffect(() => {
+    if (phase !== "battle" && phase !== "shooting" && phase !== "feedback" && phase !== "challenge") {
+      if (enemyAiRafRef.current !== null) cancelAnimationFrame(enemyAiRafRef.current);
+      enemyAiRafRef.current = null;
+      return;
+    }
+    let last = performance.now();
+    const tick = () => {
+      const now  = performance.now();
+      const dt   = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      const s = enemyStateRef.current;
+      const hx = heroPosRef.current.x;
+      const hy = heroPosRef.current.y;
+      const dx = hx - s.x;
+      const dy = hy - s.y;
+      const dist = Math.hypot(dx, dy) || 0.0001;
+      const ux = dx / dist;
+      const uy = dy / dist;
+      const v = enemyVariantRef.current;
+      const age = (now - s.spawnedAt) / 1000;
+
+      // Per-archetype velocity (in arena %/sec)
+      let dvx = 0, dvy = 0;
+      if (v === "goblin") {
+        // ground chase with hop wobble
+        const SPEED = 18;
+        const wobble = Math.sin(age * 6) * 4;
+        dvx = ux * SPEED + (-uy) * wobble;
+        dvy = uy * SPEED + ( ux) * wobble;
+        s.animPhase = (Math.sin(age * 8) + 1) * 0.5;
+      } else if (v === "bat") {
+        // sinusoidal swoop around the hero
+        const SPEED = 26;
+        const lateral = Math.sin(age * 3.4) * SPEED * 0.7;
+        const approach = dist > 18 ? SPEED : -SPEED * 0.3;
+        dvx = ux * approach + (-uy) * lateral;
+        dvy = uy * approach + ( ux) * lateral - Math.cos(age * 2) * 4;
+        s.animPhase = (Math.sin(age * 14) + 1) * 0.5;
+      } else if (v === "giant") {
+        // slow stomp toward hero
+        const SPEED = 8;
+        const stompKick = Math.abs(Math.sin(age * 2)) > 0.85 ? 1.6 : 1;
+        dvx = ux * SPEED * stompKick;
+        dvy = uy * SPEED * stompKick;
+        s.animPhase = (Math.sin(age * 2) + 1) * 0.5;
+      } else { // wizard
+        // teleport when projectile in flight or cooldown elapsed
+        s.teleportCooldown -= dt;
+        const projectileInFlight = showProjectileRef.current;
+        if (projectileInFlight && s.teleportCooldown < 0.3) {
+          // dash sideways to dodge
+          const side = Math.random() < 0.5 ? -1 : 1;
+          s.x += -uy * 18 * side;
+          s.y +=  ux * 12 * side;
+          s.teleportCooldown = 1.4;
+          s.animPhase = 1;
+        } else if (s.teleportCooldown <= 0) {
+          // teleport to a fresh angle around hero
+          const ang = Math.random() * Math.PI * 2;
+          const r = 22 + Math.random() * 10;
+          s.x = hx + Math.cos(ang) * r;
+          s.y = hy + Math.sin(ang) * r;
+          s.teleportCooldown = 1.8 + Math.random() * 1.4;
+          s.animPhase = 1;
+        } else {
+          // small drift
+          const SPEED = 10;
+          const tangX = -uy, tangY = ux;
+          dvx = tangX * SPEED + ux * (dist > 22 ? 4 : -3);
+          dvy = tangY * SPEED + uy * (dist > 22 ? 4 : -3);
+          s.animPhase = Math.max(0, s.animPhase - dt * 2.5);
+        }
+      }
+
+      // Smooth toward desired velocity
+      s.vx = s.vx + (dvx - s.vx) * Math.min(1, dt * 5);
+      s.vy = s.vy + (dvy - s.vy) * Math.min(1, dt * 5);
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+
+      // Soft bounds after spawn-in
+      if (age > 1.0) {
+        if (s.x < 4)  { s.x = 4;  s.vx = Math.abs(s.vx) * 0.6; }
+        if (s.x > 96) { s.x = 96; s.vx = -Math.abs(s.vx) * 0.6; }
+        if (s.y < 4)  { s.y = 4;  s.vy = Math.abs(s.vy) * 0.6; }
+        if (s.y > 88) { s.y = 88; s.vy = -Math.abs(s.vy) * 0.6; }
+      }
+
+      // Facing — point toward hero (SVG drawn facing UP → 0°)
+      // angle of vector (hx-s.x, hy-s.y) from "up"
+      s.facingDeg = (Math.atan2(dx, -dy) * 180) / Math.PI;
+
+      // Write transform directly to DOM
+      const el = enemyRef.current;
+      if (el && arenaRef.current) {
+        const aw = arenaRef.current.offsetWidth;
+        const ah = arenaRef.current.offsetHeight;
+        const px = (s.x / 100) * aw;
+        const py = (s.y / 100) * ah;
+        el.style.transform = `translate(${px}px, ${py}px) translate(-50%, -50%)`;
+        // child rotates via React (we re-render at low rate via enemyTick)
+      }
+
+      // Contact detection — only during battle phase, not while another shot is in flight
+      if (phase === "battle" && !isPending && !bossDefeated) {
+        if (dist < 9 && now - lastContactRef.current > 800) {
+          lastContactRef.current = now;
+          // trigger challenge through the existing fire path
+          handleFireCrystalRef.current?.();
+        }
+      }
+
+      enemyAiRafRef.current = requestAnimationFrame(tick);
+    };
+    enemyAiRafRef.current = requestAnimationFrame(tick);
+    // bump react state ~10/sec for SVG anim phase
+    const phaseTickInt = setInterval(() => setEnemyTick(t => (t + 1) % 1000), 100);
+    return () => {
+      if (enemyAiRafRef.current !== null) cancelAnimationFrame(enemyAiRafRef.current);
+      enemyAiRafRef.current = null;
+      clearInterval(phaseTickInt);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
+  // refs used by enemy AI
+  const showProjectileRef = useRef(false);
+  useEffect(() => { showProjectileRef.current = showProjectile; }, [showProjectile]);
+  const handleFireCrystalRef = useRef<(() => void) | null>(null);
+
   // ── Movement RAF loop ──────────────────────────────────────────────────────
   useEffect(() => {
     if (phase !== "battle") {
@@ -1247,6 +1425,11 @@ function ArenaPageContent() {
     audio.volume = 0.4;
     audio.play().catch(() => {});
   }
+
+  // Keep latest fire fn in a ref so the enemy-AI raf can call it without re-binding
+  handleFireCrystalRef.current = () => {
+    if (phase === "battle" && !isPending && !bossDefeated) handleFireCrystal();
+  };
 
   // ── Open challenge card ────────────────────────────────────────────────────
   function handleFireCrystal() {
@@ -2177,42 +2360,53 @@ function ArenaPageContent() {
           );
         })}
 
-        {/* ── Enemy (top of arena) — drifts on a curved AI path (sin/cos), re-randomized per question ── */}
+        {/* ── Active enemy archetype — moves with AI, faces hero, contact opens challenge ── */}
+        {/* outer ref div: position is controlled directly via .style.transform by the AI raf loop */}
         <div
           ref={enemyRef}
           style={{
             position: "absolute",
-            top:  "4%",
-            left: "calc(50% - 78px)",
-            transform: `translate(${enemyOffset.x.toFixed(1)}px, ${enemyOffset.y.toFixed(1)}px)`,
-            transition: "transform 60ms linear",
+            top: 0,
+            left: 0,
+            transform: "translate(0px, 0px) translate(-50%, -50%)",
             willChange: "transform",
+            zIndex: 5,
+            pointerEvents: "none",
           }}
         >
           <div
             className={enemyShake ? "enemy-hit-shake" : ""}
             style={{
-              display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+              filter:
+                enemyHit === "flash"
+                  ? "brightness(2.6) saturate(0.2) drop-shadow(0 0 14px white)"
+                  : enemyHit === "tint"
+                  ? "brightness(1.4) sepia(1) saturate(3) hue-rotate(300deg)"
+                  : "none",
+              transition: "filter 0.15s ease",
             }}
           >
-            {/* HP bar directly above enemy — compact, quick feedback only */}
+            {/* HP bar above the enemy (never rotates) */}
             <div style={{
-              width: 120,
-              background: "rgba(0,0,0,0.4)",
+              width: Math.min(140, getEnemyMeta(enemyVariant).size + 30),
+              background: "rgba(0,0,0,0.45)",
               borderRadius: 8,
-              padding: "4px 8px",
+              padding: "3px 7px",
               border: `1px solid ${bossHp <= 30 ? "rgba(250,204,21,0.45)" : "rgba(248,113,113,0.35)"}`,
             }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
-                <span style={{ color: "rgba(251,113,133,0.75)", fontSize: 8, fontWeight: 700 }}>כוח האויב</span>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
+                <span style={{ color: "rgba(251,113,133,0.85)", fontSize: 8, fontWeight: 700 }}>
+                  {getEnemyMeta(enemyVariant).nameHe}
+                </span>
                 <span style={{
                   fontSize: 9, fontWeight: 800,
-                  color: bossHp <= 30 ? "#facc15" : "rgba(251,113,133,0.9)",
+                  color: bossHp <= 30 ? "#facc15" : "rgba(251,113,133,0.95)",
                 }}>
                   {bossHp}%
                 </span>
               </div>
-              <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: 4, height: 7, overflow: "hidden" }}>
+              <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: 4, height: 6, overflow: "hidden" }}>
                 <div style={{
                   height: "100%", width: `${bossHp}%`, borderRadius: 4,
                   background: bossHp > 60
@@ -2225,20 +2419,15 @@ function ArenaPageContent() {
               </div>
             </div>
 
-            {/* Enemy sprite — clean extracted PNG with real transparency */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/enemy_blue_idle_clean.png"
-              alt=""
-              style={{
-                height: 260, width: "auto", display: "block",
-                filter: enemyHit === "flash"
-                  ? "brightness(2.5) saturate(0.2)"
-                  : enemyHit === "tint"
-                  ? "brightness(1.4) sepia(1) saturate(3) hue-rotate(300deg)"
-                  : "drop-shadow(0 0 14px rgba(34,211,238,0.55))",
-                transition: "filter 0.15s ease",
-              }}
+            {/* Inline-SVG enemy — rotates to face hero, animates per archetype */}
+            <CrystalEnemy
+              variant={enemyVariant}
+              size={getEnemyMeta(enemyVariant).size}
+              hp={bossHp}
+              damaged={enemyHit === "flash"}
+              showName={false}
+              facingDeg={enemyStateRef.current.facingDeg}
+              animPhase={enemyStateRef.current.animPhase + enemyTick * 0.001}
             />
           </div>
         </div>
