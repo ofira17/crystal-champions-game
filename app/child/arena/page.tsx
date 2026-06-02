@@ -804,7 +804,11 @@ function ArenaPageContent() {
   const [arenaShake,    setArenaShake]    = useState(false);
   const [projectileTravelPx, setProjectileTravelPx] = useState(210);
   const [projectileOriginX,  setProjectileOriginX]  = useState(50);   // % across arena
+  const [projectileOriginY,  setProjectileOriginY]  = useState(35);   // % from bottom (origin = hero center)
   const [projectileDriftPx,  setProjectileDriftPx]  = useState(0);    // px to drift toward enemy center
+  // 3-in-a-row streak — when current streak ≥ 3 the diamond shot turns gold/strong.
+  const [correctStreak,      setCorrectStreak]      = useState(0);
+  const [strongShot,         setStrongShot]         = useState(false);
   const [enemyAnchor, setEnemyAnchor] = useState<{ top: number; left: number } | null>(null);
   const [isPending,     startTransition]  = useTransition();
 
@@ -1132,7 +1136,8 @@ function ArenaPageContent() {
   const enterShootRef = useRef<(() => void) | null>(null);
   const rafRef      = useRef<number | null>(null);
   const MOVE_SPEED  = 0.55;
-  const HERO_BOUNDS = { xMin: 6, xMax: 94, yMin: 30, yMax: 88 };
+  // Full-arena movement — hero can roam edge to edge, top to bottom.
+  const HERO_BOUNDS = { xMin: 4, xMax: 96, yMin: 8, yMax: 92 };
   // ──────────────────────────────────────────────────────────────────────────
   const sessionRef  = useRef<string>("");
   const heroRef     = useRef<HTMLDivElement>(null);
@@ -1351,10 +1356,10 @@ function ArenaPageContent() {
         }
       }
 
-      // Pause/freeze enemy while the question is open or the result is being
-      // processed. Movement only progresses during the actual battle phase, so
-      // the enemy doesn't drift around while the child is reading the question.
-      if (phase === "battle") {
+      // Pause/freeze the enemy ONLY while the question is on screen. After the
+      // child answers (shooting/feedback), the enemy resumes moving — important
+      // so that a wrong answer feels like the enemy "continues" the attack.
+      if (phase !== "challenge") {
         s.vx = s.vx + (dvx - s.vx) * Math.min(1, dt * 5);
         s.vy = s.vy + (dvy - s.vy) * Math.min(1, dt * 5);
         s.x += s.vx * dt;
@@ -1548,6 +1553,12 @@ function ArenaPageContent() {
       const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
       if (didHit) {
+        // Streak bookkeeping — strong (gold) diamond at 3+ correct in a row.
+        const nextStreak = correctStreak + 1;
+        const isStrong = nextStreak >= 3;
+        setCorrectStreak(nextStreak);
+        setStrongShot(isStrong);
+
         // 1. Aim line flashes briefly
         setShowAimLine(true);
         await wait(80);
@@ -1557,21 +1568,37 @@ function ArenaPageContent() {
         setHeroAnim("dash");
         await wait(130);
 
-        // 3. Hero recoils — projectile launches simultaneously
+        // 3. Hero recoils — projectile launches simultaneously.
+        // Hero faces the enemy: mirror sprite based on enemy-x vs hero-x.
         setHeroAnim("recoil");
         if (heroRef.current && enemyRef.current && arenaRef.current) {
           const heroRect  = heroRef.current.getBoundingClientRect();
           const enemyRect = enemyRef.current.getBoundingClientRect();
           const arenaRect = arenaRef.current.getBoundingClientRect();
-          const dist = Math.round(heroRect.top - (enemyRect.top + enemyRect.height / 2));
-          setProjectileTravelPx(dist > 60 ? dist : 210);
-          // Capture hero's upper-body center in arena % at attack moment
-          const heroCenterPx = heroRect.left + heroRect.width / 2 - arenaRect.left;
-          const originPct = (heroCenterPx / arenaRect.width) * 100;
-          setProjectileOriginX(originPct);
-          // Drift = enemy center px minus hero center px (positive = rightward)
-          const enemyCenterPx = enemyRect.left + enemyRect.width / 2 - arenaRect.left;
-          setProjectileDriftPx(Math.round(enemyCenterPx - heroCenterPx));
+          const heroCenterX = heroRect.left + heroRect.width / 2;
+          const heroCenterY = heroRect.top  + heroRect.height / 2;
+          const enemyCenterX = enemyRect.left + enemyRect.width / 2;
+          const enemyCenterY = enemyRect.top  + enemyRect.height / 2;
+          const dxAbs = enemyCenterX - heroCenterX;
+          const dyAbs = enemyCenterY - heroCenterY;
+          // Mirror left/right only when the enemy is meaningfully to one side.
+          if (Math.abs(dxAbs) > 24) {
+            const goLeft = dxAbs < 0;
+            heroFacingLeftRef.current = goLeft;
+            setHeroFacingLeft(goLeft);
+          }
+          // Travel = straight-line distance from hero center to enemy center.
+          const dist = Math.round(Math.hypot(dxAbs, dyAbs));
+          setProjectileTravelPx(dist > 40 ? dist : 160);
+          const heroCenterXInArena = heroCenterX - arenaRect.left;
+          const heroCenterYInArena = heroCenterY - arenaRect.top;
+          setProjectileOriginX((heroCenterXInArena / arenaRect.width) * 100);
+          setProjectileOriginY(((arenaRect.height - heroCenterYInArena) / arenaRect.height) * 100);
+          // Drift = lateral component (positive = rightward).
+          // travelPx is the vertical magnitude consumed by proj-up-* keyframes; we
+          // sign it so an enemy ABOVE travels up, BELOW travels down.
+          setProjectileDriftPx(Math.round(dxAbs));
+          setProjectileTravelPx(Math.round(-dyAbs));
         }
         setShowProjectile(true);
         setProjectileHit(true);
@@ -1611,46 +1638,15 @@ function ArenaPageContent() {
         setEnemyShake(false);
 
       } else {
-        // 1. Hero small toss motion
-        setHeroAnim("dash");
-        await wait(110);
-
-        // 2. Hero recoils — miss projectile launches
+        // Wrong answer — weak/no hit. Hero stumbles in place, no projectile is
+        // launched, and the enemy keeps moving (its AI un-freezes immediately).
+        setCorrectStreak(0);
+        setStrongShot(false);
         setHeroAnim("recoil");
-        if (heroRef.current && enemyRef.current && arenaRef.current) {
-          const heroRect  = heroRef.current.getBoundingClientRect();
-          const enemyRect = enemyRef.current.getBoundingClientRect();
-          const arenaRect = arenaRef.current.getBoundingClientRect();
-          const dist = Math.round(heroRect.top - (enemyRect.top + enemyRect.height / 2));
-          setProjectileTravelPx(dist > 60 ? dist : 210);
-          const heroCenterPx = heroRect.left + heroRect.width / 2 - arenaRect.left;
-          const originPct = (heroCenterPx / arenaRect.width) * 100;
-          setProjectileOriginX(originPct);
-          const enemyCenterPx = enemyRect.left + enemyRect.width / 2 - arenaRect.left;
-          setProjectileDriftPx(Math.round(enemyCenterPx - heroCenterPx));
-        }
-        setShowProjectile(true);
-        setProjectileHit(false);
-        await wait(150);
-        setHeroAnim("idle");
-
-        // 3. Projectile travels and hits a shield
-        await wait(310);
-
-        // 4. Shield block effect near enemy
-        setShowProjectile(false);
-        if (enemyRef.current && arenaRef.current) {
-          const er = enemyRef.current.getBoundingClientRect();
-          const ar = arenaRef.current.getBoundingClientRect();
-          setEnemyAnchor({
-            top:  er.top  + er.height / 2 - ar.top,
-            left: er.left + er.width  / 2 - ar.left,
-          });
-        }
         playSound("wrong");
-        setShieldBlock(true);
-        await wait(430);
-        setShieldBlock(false);
+        await wait(200);
+        setHeroAnim("idle");
+        await wait(150);
       }
 
       // Safety cleanup
@@ -2518,31 +2514,30 @@ function ArenaPageContent() {
           }} />
         )}
 
-        {/* ── Crystal projectile (bottom → top, fast glowing streak) ── */}
-        {showProjectile && (
+        {/* ── Diamond projectile — only on a correct hit. ── */}
+        {showProjectile && projectileHit && (
           <div style={{
             position: "absolute",
-            bottom: "35%", left: `${projectileOriginX}%`,
-            transform: "translateX(-50%)",
+            bottom: `${projectileOriginY}%`, left: `${projectileOriginX}%`,
+            transform: "translate(-50%, 50%)",
             zIndex: 30, pointerEvents: "none",
           }}>
             <div style={{
-              animation: `${projectileHit ? "proj-up-hit" : "proj-up-miss"} 380ms cubic-bezier(0.1,0,0.4,1) forwards`,
-              display: "flex", flexDirection: "column", alignItems: "center",
+              animation: `proj-up-hit 380ms cubic-bezier(0.1,0,0.4,1) forwards`,
+              display: "flex", alignItems: "center", justifyContent: "center",
             }}>
-              {/* Stretched glowing crystal streak */}
+              {/* Diamond — gold + larger on a 3+ streak, purple/cyan otherwise. */}
               <div style={{
-                width: 9, height: 34,
-                background: "linear-gradient(180deg, white 0%, #c084fc 25%, #818cf8 65%, rgba(129,140,248,0) 100%)",
-                borderRadius: 5,
-                boxShadow: "0 0 10px rgba(167,139,250,0.9), 0 0 22px rgba(139,92,246,0.5), 0 -2px 8px white",
-              }} />
-              {/* Trail glow behind the streak */}
-              <div style={{
-                width: 5, height: 18,
-                marginTop: -4,
-                background: "linear-gradient(180deg, rgba(139,92,246,0.4) 0%, transparent 100%)",
-                borderRadius: 3,
+                width:  strongShot ? 30 : 22,
+                height: strongShot ? 30 : 22,
+                background: strongShot
+                  ? "linear-gradient(160deg, #fff7c2 0%, #fde047 35%, #f59e0b 70%, #b45309 100%)"
+                  : "linear-gradient(160deg, white 0%, #e9d5ff 30%, #a78bfa 65%, #6d28d9 100%)",
+                clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)",
+                boxShadow: strongShot
+                  ? "0 0 22px rgba(253,224,71,1), 0 0 44px rgba(245,158,11,0.85), 0 0 8px white"
+                  : "0 0 14px rgba(167,139,250,0.95), 0 0 28px rgba(139,92,246,0.6), 0 0 6px white",
+                filter: strongShot ? "brightness(1.25)" : undefined,
               }} />
             </div>
           </div>
