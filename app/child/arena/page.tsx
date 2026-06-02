@@ -825,6 +825,70 @@ function ArenaPageContent() {
   }, []);
 
   // ── Hero movement ──────────────────────────────────────────────────────────
+  // Enemy idle drift — curved sin/cos motion, with per-question randomized phase/style
+  const [enemyOffset, setEnemyOffset] = useState({ x: 0, y: 0 });
+  const enemyAiRef = useRef({
+    style: 0,            // 0=circle, 1=figure-8, 2=lazy weave
+    phaseX: Math.random() * Math.PI * 2,
+    phaseY: Math.random() * Math.PI * 2,
+    freqX:  0.6 + Math.random() * 0.5,
+    freqY:  0.5 + Math.random() * 0.5,
+    ampX:   28 + Math.random() * 18,
+    ampY:   10 + Math.random() * 8,
+    start:  performance.now(),
+  });
+  const enemyRafRef = useRef<number | null>(null);
+
+  // Re-randomize enemy AI pattern when the question changes (so each enemy moves differently)
+  useEffect(() => {
+    enemyAiRef.current = {
+      style:  Math.floor(Math.random() * 3),
+      phaseX: Math.random() * Math.PI * 2,
+      phaseY: Math.random() * Math.PI * 2,
+      freqX:  0.5 + Math.random() * 0.6,
+      freqY:  0.4 + Math.random() * 0.6,
+      ampX:   24 + Math.random() * 22,
+      ampY:   8  + Math.random() * 10,
+      start:  performance.now(),
+    };
+  }, [current]);
+
+  // Enemy idle-drift loop — only when actively in battle, not during shooting/feedback/mega
+  useEffect(() => {
+    if (phase !== "battle" && phase !== "challenge") {
+      if (enemyRafRef.current !== null) cancelAnimationFrame(enemyRafRef.current);
+      enemyRafRef.current = null;
+      setEnemyOffset({ x: 0, y: 0 });
+      return;
+    }
+    const tick = () => {
+      const ai = enemyAiRef.current;
+      const t  = (performance.now() - ai.start) / 1000;
+      let ox = 0, oy = 0;
+      if (ai.style === 0) {
+        // circle-strafe
+        ox = Math.cos(t * ai.freqX + ai.phaseX) * ai.ampX;
+        oy = Math.sin(t * ai.freqY + ai.phaseY) * ai.ampY;
+      } else if (ai.style === 1) {
+        // figure-8 (lemniscate)
+        ox = Math.sin(t * ai.freqX + ai.phaseX) * ai.ampX;
+        oy = Math.sin(2 * (t * ai.freqY + ai.phaseY)) * ai.ampY;
+      } else {
+        // lazy weave + bob
+        ox = Math.sin(t * ai.freqX + ai.phaseX) * ai.ampX
+           + Math.sin(t * 0.31 + ai.phaseY) * (ai.ampX * 0.25);
+        oy = Math.sin(t * ai.freqY * 1.4 + ai.phaseY) * ai.ampY;
+      }
+      setEnemyOffset({ x: ox, y: oy });
+      enemyRafRef.current = requestAnimationFrame(tick);
+    };
+    enemyRafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (enemyRafRef.current !== null) cancelAnimationFrame(enemyRafRef.current);
+      enemyRafRef.current = null;
+    };
+  }, [phase]);
+
   const [heroPos,         setHeroPos]         = useState({ x: 50, y: 59 });
   const [isHeroMoving,    setIsHeroMoving]    = useState(false);
   const [heroFacingLeft,  setHeroFacingLeft]  = useState(false);
@@ -1457,6 +1521,14 @@ function ArenaPageContent() {
       <style>{`
         /* ── Hero motion ── */
         .hero-anim-idle   { transform: translateY(0px); transition: transform 50ms ease-out; }
+        /* Subtle idle bob/sway when standing still — never overrides dash/recoil */
+        .hero-idle-bob    { animation: hero-idle-bob 2.6s ease-in-out infinite; }
+        @keyframes hero-idle-bob {
+          0%,100% { transform: translateY(0px)   rotate(0deg);   }
+          25%     { transform: translateY(-3px)  rotate(-0.6deg); }
+          50%     { transform: translateY(0px)   rotate(0deg);   }
+          75%     { transform: translateY(-2px)  rotate(0.6deg);  }
+        }
         .hero-anim-dash   { animation: hero-dash-up 130ms ease-out forwards; }
         .hero-anim-recoil { animation: hero-recoil 170ms cubic-bezier(0.34,1.56,0.64,1) forwards; }
         @keyframes hero-dash-up {
@@ -1787,8 +1859,18 @@ function ArenaPageContent() {
       >
         {/* Arena map is the background image — no CSS decorations */}
 
-        {/* ── Enemy (top of arena) — no zIndex/transform to avoid stacking context breaking mix-blend-mode ── */}
-        <div ref={enemyRef} style={{ position: "absolute", top: "4%", left: "calc(50% - 78px)" }}>
+        {/* ── Enemy (top of arena) — drifts on a curved AI path (sin/cos), re-randomized per question ── */}
+        <div
+          ref={enemyRef}
+          style={{
+            position: "absolute",
+            top:  "4%",
+            left: "calc(50% - 78px)",
+            transform: `translate(${enemyOffset.x.toFixed(1)}px, ${enemyOffset.y.toFixed(1)}px)`,
+            transition: "transform 60ms linear",
+            willChange: "transform",
+          }}
+        >
           <div
             className={enemyShake ? "enemy-hit-shake" : ""}
             style={{
@@ -1932,7 +2014,7 @@ function ArenaPageContent() {
             left: `calc(${heroPos.x}% - 61px)`,
           }}>
             <div
-              className={`hero-anim-${heroAnim}`}
+              className={`hero-anim-${heroAnim}${!isHeroMoving && !isAttacking && heroAnim === "idle" ? " hero-idle-bob" : ""}`}
               style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}
             >
               {/* Hero sprite — swaps between idle and run frame; mirrors when facing left */}

@@ -1,26 +1,712 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Segoe UI", Arial, "Noto Sans Hebrew", "Arial Hebrew", sans-serif;
+
+  /* Crystal Champions palette */
+  --color-arena-bg:    #0a0a1a;
+  --color-crystal-1:   #7c3aed;
+  --color-crystal-2:   #4f46e5;
+  --color-gold:        #f59e0b;
+  --color-fire:        #ef4444;
+  --color-ice:         #06b6d4;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+* { box-sizing: border-box; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  direction: rtl;
+  font-family: var(--font-sans);
+  background: radial-gradient(ellipse at 20% 0%, #1e0a3c 0%, #0a0a1a 60%);
+  min-height: 100vh;
 }
+
+/* ══════════════════════════════════════════════════════════
+   3D BRAWL-STYLE BUTTONS
+══════════════════════════════════════════════════════════ */
+
+.btn-3d {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+  transition: transform 80ms, box-shadow 80ms, border-bottom-width 80ms;
+  border-bottom: 5px solid;
+  border-right: 2px solid;
+  cursor: pointer;
+}
+.btn-3d:active {
+  transform: translateY(3px);
+  border-bottom-width: 2px !important;
+}
+.btn-3d:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.btn-3d-violet {
+  background: linear-gradient(160deg, #a855f7, #7c3aed);
+  border-color: #4c1d95;
+  box-shadow: 0 8px 24px rgba(124,58,237,0.5);
+  color: white;
+}
+.btn-3d-gold {
+  background: linear-gradient(160deg, #fbbf24, #d97706);
+  border-color: #92400e;
+  box-shadow: 0 8px 24px rgba(245,158,11,0.6);
+  color: #1c1917;
+}
+.btn-3d-emerald {
+  background: linear-gradient(160deg, #34d399, #059669);
+  border-color: #064e3b;
+  box-shadow: 0 8px 24px rgba(52,211,153,0.5);
+  color: white;
+}
+.btn-3d-red {
+  background: linear-gradient(160deg, #f87171, #dc2626);
+  border-color: #991b1b;
+  box-shadow: 0 8px 24px rgba(239,68,68,0.5);
+  color: white;
+}
+.btn-3d-blue {
+  background: linear-gradient(160deg, #60a5fa, #2563eb);
+  border-color: #1e3a8a;
+  box-shadow: 0 6px 20px rgba(59,130,246,0.5);
+  color: white;
+}
+.btn-3d-teal {
+  background: linear-gradient(160deg, #2dd4bf, #0d9488);
+  border-color: #134e4a;
+  box-shadow: 0 6px 20px rgba(20,184,166,0.5);
+  color: white;
+}
+.btn-3d-rose {
+  background: linear-gradient(160deg, #fb7185, #e11d48);
+  border-color: #9f1239;
+  box-shadow: 0 6px 20px rgba(225,29,72,0.5);
+  color: white;
+}
+.btn-3d-orange {
+  background: linear-gradient(160deg, #fb923c, #ea580c);
+  border-color: #7c2d12;
+  box-shadow: 0 6px 20px rgba(234,88,12,0.5);
+  color: white;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   ARENA BUTTON — PULSING GOLD CTA
+══════════════════════════════════════════════════════════ */
+
+@keyframes arena-pulse {
+  0%, 100% {
+    box-shadow: 0 8px 24px rgba(245,158,11,0.6), 0 0 0 0 rgba(245,158,11,0.4);
+  }
+  50% {
+    box-shadow: 0 10px 36px rgba(245,158,11,0.9), 0 0 0 18px rgba(245,158,11,0);
+  }
+}
+.btn-arena-pulse {
+  animation: arena-pulse 1.8s ease-in-out infinite;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   HERO ANIMATIONS
+══════════════════════════════════════════════════════════ */
+
+@keyframes hero-float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-12px); }
+}
+.hero-float { animation: hero-float 3.2s ease-in-out infinite; }
+
+@keyframes hero-combat {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  15%       { transform: translateX(-5px) rotate(-3deg); }
+  35%       { transform: translateX(5px)  rotate(3deg); }
+  55%       { transform: translateX(-3px) rotate(-2deg); }
+  75%       { transform: translateX(3px)  rotate(2deg); }
+}
+.hero-combat { animation: hero-combat 0.45s ease-in-out infinite; }
+
+
+/* ══════════════════════════════════════════════════════════
+   LEGENDARY GLOW
+══════════════════════════════════════════════════════════ */
+
+@keyframes legendary-pulse {
+  0%, 100% {
+    box-shadow: 0 0 12px 2px rgba(245,158,11,0.5),
+                0 0 30px 6px rgba(251,191,36,0.2);
+  }
+  50% {
+    box-shadow: 0 0 22px 6px rgba(245,158,11,0.85),
+                0 0 50px 14px rgba(251,191,36,0.35);
+  }
+}
+.legendary-glow {
+  animation: legendary-pulse 2s ease-in-out infinite;
+}
+
+@keyframes legendary-card-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(245,158,11,0.4), 0 4px 0 #92400e;
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(245,158,11,0.75), 0 4px 0 #b45309;
+  }
+}
+.legendary-glow-card {
+  animation: legendary-card-pulse 2s ease-in-out infinite !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   TREASURE BOX
+══════════════════════════════════════════════════════════ */
+
+@keyframes box-rarity-pulse {
+  0%, 100% { box-shadow: 0 0 10px 2px var(--box-glow-color), 0 0 28px 4px var(--box-glow-color-dim); }
+  50%       { box-shadow: 0 0 22px 6px var(--box-glow-color), 0 0 50px 12px var(--box-glow-color-dim); }
+}
+.box-rarity-glow {
+  animation: box-rarity-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes box-open-burst {
+  0%   { transform: scale(1);    opacity: 1; }
+  40%  { transform: scale(1.18); opacity: 1; }
+  100% { transform: scale(1.55); opacity: 0; }
+}
+.box-open-burst {
+  animation: box-open-burst 0.32s cubic-bezier(0.2, 0, 0.6, 1) forwards;
+}
+
+@keyframes tap-hint-bounce {
+  0%, 100% { transform: scale(1); }
+  40%      { transform: scale(1.22) rotate(-3deg); }
+  70%      { transform: scale(0.92) rotate(2deg); }
+}
+.tap-hint-bounce {
+  animation: tap-hint-bounce 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes treasure-shake {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  20%       { transform: rotate(-7deg) scale(1.06); }
+  40%       { transform: rotate(7deg)  scale(1.06); }
+  60%       { transform: rotate(-4deg) scale(1.04); }
+  80%       { transform: rotate(4deg)  scale(1.04); }
+}
+.treasure-shake { animation: treasure-shake 0.42s ease-in-out; }
+
+@keyframes burst {
+  0%   { transform: scale(0.4) rotate(-12deg); opacity: 0; }
+  55%  { transform: scale(1.25) rotate(4deg);  opacity: 1; }
+  100% { transform: scale(1)    rotate(0deg);  opacity: 1; }
+}
+.burst { animation: burst 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+@keyframes rare-slide-up {
+  0%   { transform: translateY(28px); opacity: 0; }
+  100% { transform: translateY(0px);  opacity: 1; }
+}
+.rare-slide-up { animation: rare-slide-up 0.42s ease-out forwards; }
+
+@keyframes common-fade-in {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+.common-fade-in { animation: common-fade-in 0.38s ease-out forwards; }
+
+
+/* ══════════════════════════════════════════════════════════
+   CONFETTI (Legendary reveal)
+══════════════════════════════════════════════════════════ */
+
+@keyframes confetti-fall {
+  0%   { transform: translateY(-60px) rotate(0deg) scale(1);     opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateY(105vh) rotate(720deg) scale(0.8); opacity: 0; }
+}
+.confetti-piece {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 9999;
+  animation: confetti-fall linear forwards;
+}
+
+@keyframes confetti-spin {
+  0%   { transform: translateY(-60px) rotate(0deg) scaleX(1); opacity: 1; }
+  50%  { transform: translateY(40vh)  rotate(360deg) scaleX(-1); }
+  100% { transform: translateY(105vh) rotate(720deg) scaleX(1);  opacity: 0; }
+}
+.confetti-ribbon {
+  position: fixed;
+  width: 6px;
+  height: 18px;
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: 9999;
+  animation: confetti-spin linear forwards;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   VICTORY & BATTLE EFFECTS
+══════════════════════════════════════════════════════════ */
+
+@keyframes victory-pop {
+  0%   { transform: scale(0) rotate(-20deg); opacity: 0; }
+  60%  { transform: scale(1.35) rotate(5deg); opacity: 1; }
+  100% { transform: scale(1)    rotate(0deg); opacity: 1; }
+}
+.victory-pop { animation: victory-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+@keyframes damage-flash {
+  0%         { filter: none; }
+  20%        { filter: brightness(3) saturate(0) sepia(1); }
+  50%        { filter: brightness(1.5) saturate(0); }
+  100%       { filter: none; }
+}
+.damage-flash { animation: damage-flash 0.45s ease-out; }
+
+@keyframes mega-hit-blast {
+  0%   { transform: scale(1);    opacity: 1; }
+  40%  { transform: scale(2.2);  opacity: 0.8; }
+  100% { transform: scale(3.5);  opacity: 0; }
+}
+.mega-blast { animation: mega-hit-blast 0.55s ease-out forwards; }
+
+@keyframes screen-flash {
+  0%, 100% { opacity: 0; }
+  20%       { opacity: 0.35; }
+}
+.screen-flash {
+  position: fixed;
+  inset: 0;
+  background: white;
+  pointer-events: none;
+  z-index: 100;
+  animation: screen-flash 0.4s ease-out forwards;
+}
+
+@keyframes boss-idle {
+  0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 8px rgba(239,68,68,0.4)); }
+  50%       { transform: translateY(-6px) scale(1.03); filter: drop-shadow(0 0 18px rgba(239,68,68,0.7)); }
+}
+.boss-idle { animation: boss-idle 2.5s ease-in-out infinite; }
+
+@keyframes boss-hurt {
+  0%   { transform: translateX(0)    scale(1);    filter: brightness(1); }
+  20%  { transform: translateX(12px) scale(0.95); filter: brightness(3) saturate(0); }
+  40%  { transform: translateX(-8px) scale(0.97); filter: brightness(2); }
+  100% { transform: translateX(0)    scale(1);    filter: brightness(1); }
+}
+.boss-hurt { animation: boss-hurt 0.5s ease-out; }
+
+
+/* ══════════════════════════════════════════════════════════
+   CRYSTAL ENERGY
+══════════════════════════════════════════════════════════ */
+
+@keyframes crystal-charged {
+  0%, 100% {
+    box-shadow: 0 0 6px 1px rgba(167,139,250,0.6);
+    background-color: #a78bfa;
+  }
+  50% {
+    box-shadow: 0 0 14px 4px rgba(167,139,250,0.95);
+    background-color: #c4b5fd;
+  }
+}
+.crystal-charged { animation: crystal-charged 1.2s ease-in-out infinite; }
+
+@keyframes energy-full-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(167,139,250,0.6); }
+  50%       { box-shadow: 0 0 0 8px rgba(167,139,250,0); }
+}
+.energy-full-glow { animation: energy-full-pulse 1s ease-in-out infinite; }
+
+@keyframes mega-ready-pop {
+  0%   { transform: scale(1);    color: #fde68a; text-shadow: 0 0 0px rgba(253,230,138,0); }
+  30%  { transform: scale(1.45); color: #fbbf24; text-shadow: 0 0 14px rgba(251,191,36,1); }
+  65%  { transform: scale(1.15); }
+  100% { transform: scale(1);    color: #fde68a; text-shadow: 0 0 8px rgba(253,230,138,0.9); }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   CARD ENTRANCE & TRANSITIONS
+══════════════════════════════════════════════════════════ */
+
+@keyframes card-enter {
+  from { transform: translateY(16px) scale(0.96); opacity: 0; }
+  to   { transform: translateY(0)    scale(1);    opacity: 1; }
+}
+.card-enter { animation: card-enter 0.28s ease-out forwards; }
+
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.slide-up { animation: slide-up 0.32s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.fade-in { animation: fade-in 0.25s ease-out forwards; }
+
+
+/* ══════════════════════════════════════════════════════════
+   SPEECH BUBBLE — Comic style
+══════════════════════════════════════════════════════════ */
+
+.speech-bubble {
+  position: relative;
+  background: #fff;
+  color: #1e1b4b;
+  border-radius: 1.25rem;
+  border: 3px solid #1e1b4b;
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+  box-shadow: 4px 4px 0 #1e1b4b;
+  line-height: 1.4;
+}
+/* Tail pointing right (toward hero on the right in RTL layout) */
+.speech-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: 1.2rem;
+  right: -18px;
+  border: 10px solid transparent;
+  border-left-color: #1e1b4b;
+}
+.speech-bubble::before {
+  content: "";
+  position: absolute;
+  bottom: 1.4rem;
+  right: -12px;
+  border: 8px solid transparent;
+  border-left-color: #fff;
+  z-index: 1;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   BRAWL-STYLE CARD BORDERS
+══════════════════════════════════════════════════════════ */
+
+.card-brawl {
+  border: 3px solid;
+  border-radius: 1.25rem;
+  box-shadow: 0 4px 0;
+  background: linear-gradient(160deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%);
+}
+.card-brawl-violet {
+  border-color: #7c3aed;
+  box-shadow: 0 4px 0 #4c1d95;
+}
+.card-brawl-gold {
+  border-color: #d97706;
+  box-shadow: 0 4px 0 #92400e;
+}
+.card-brawl-cyan {
+  border-color: #0891b2;
+  box-shadow: 0 4px 0 #164e63;
+}
+.card-brawl-red {
+  border-color: #dc2626;
+  box-shadow: 0 4px 0 #7f1d1d;
+}
+.card-brawl-emerald {
+  border-color: #059669;
+  box-shadow: 0 4px 0 #064e3b;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   ANSWER BUTTON POWER STYLE
+══════════════════════════════════════════════════════════ */
+
+.answer-btn {
+  position: relative;
+  border-radius: 1.25rem;
+  border-bottom: 5px solid;
+  border-right: 2px solid;
+  font-weight: 800;
+  text-align: right;
+  padding: 1rem 0.875rem;
+  transition: transform 80ms, border-bottom-width 80ms;
+  cursor: pointer;
+  color: white;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+}
+.answer-btn:active:not(:disabled) {
+  transform: translateY(3px);
+  border-bottom-width: 2px !important;
+}
+.answer-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.answer-btn-a {
+  background: linear-gradient(150deg, #60a5fa, #1d4ed8);
+  border-color: #1e3a8a;
+  box-shadow: 0 6px 20px rgba(29,78,216,0.4);
+}
+.answer-btn-b {
+  background: linear-gradient(150deg, #34d399, #059669);
+  border-color: #064e3b;
+  box-shadow: 0 6px 20px rgba(5,150,105,0.4);
+}
+.answer-btn-c {
+  background: linear-gradient(150deg, #fb923c, #c2410c);
+  border-color: #7c2d12;
+  box-shadow: 0 6px 20px rgba(194,65,12,0.4);
+}
+.answer-btn-d {
+  background: linear-gradient(150deg, #f472b6, #be185d);
+  border-color: #831843;
+  box-shadow: 0 6px 20px rgba(190,24,93,0.4);
+}
+
+.answer-btn-correct {
+  background: linear-gradient(150deg, #4ade80, #16a34a) !important;
+  border-color: #14532d !important;
+  box-shadow: 0 0 24px rgba(74,222,128,0.7) !important;
+  animation: correct-flash 0.4s ease-out;
+}
+.answer-btn-wrong {
+  background: linear-gradient(150deg, #94a3b8, #475569) !important;
+  border-color: #1e293b !important;
+  opacity: 0.6;
+}
+
+@keyframes correct-flash {
+  0%   { box-shadow: 0 0 0 0 rgba(74,222,128,0.9); }
+  100% { box-shadow: 0 0 40px 12px rgba(74,222,128,0); }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   BOSS BATTLE STYLES
+══════════════════════════════════════════════════════════ */
+
+.boss-hp-bar-container {
+  height: 20px;
+  background: rgba(0,0,0,0.5);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid rgba(239,68,68,0.4);
+  box-shadow: 0 0 12px rgba(239,68,68,0.25), inset 0 2px 4px rgba(0,0,0,0.4);
+}
+.boss-hp-fill {
+  height: 100%;
+  border-radius: 8px;
+  transition: width 0.7s ease-out;
+  position: relative;
+  overflow: hidden;
+}
+.boss-hp-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%);
+  animation: hp-shine 2s linear infinite;
+  background-size: 200% 100%;
+}
+@keyframes hp-shine {
+  from { background-position: -200% center; }
+  to   { background-position:  200% center; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   WORLD CARDS
+══════════════════════════════════════════════════════════ */
+
+.world-locked-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(15,23,42,0.6) 0%, rgba(30,41,59,0.5) 100%);
+  border-radius: inherit;
+  backdrop-filter: grayscale(0.6) brightness(0.7);
+}
+
+@keyframes completed-badge {
+  0%, 100% { transform: rotate(-4deg) scale(1); }
+  50%       { transform: rotate(4deg)  scale(1.1); }
+}
+.badge-completed { animation: completed-badge 1.2s ease-in-out infinite; }
+
+
+/* ══════════════════════════════════════════════════════════
+   SHIMMER & TEXT EFFECTS
+══════════════════════════════════════════════════════════ */
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+.text-shimmer {
+  background: linear-gradient(90deg, #f59e0b, #fde68a, #f59e0b, #fbbf24);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2s linear infinite;
+}
+.text-glow-violet {
+  text-shadow: 0 0 20px rgba(167,139,250,0.8), 0 0 40px rgba(124,58,237,0.4);
+}
+.text-glow-gold {
+  text-shadow: 0 0 20px rgba(251,191,36,0.8), 0 0 40px rgba(245,158,11,0.4);
+}
+.text-glow-white {
+  text-shadow: 0 0 16px rgba(255,255,255,0.7), 0 0 32px rgba(255,255,255,0.3);
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   XP & PROGRESS BARS
+══════════════════════════════════════════════════════════ */
+
+@keyframes xp-fill {
+  from { width: 0%; }
+}
+.xp-bar-fill { animation: xp-fill 1s ease-out forwards; }
+
+
+/* ══════════════════════════════════════════════════════════
+   BACKGROUND PARTICLES (CSS only, no JS)
+══════════════════════════════════════════════════════════ */
+
+@keyframes particle-float {
+  0%   { transform: translateY(100vh) rotate(0deg);   opacity: 0; }
+  10%  { opacity: 0.5; }
+  90%  { opacity: 0.3; }
+  100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
+}
+.particle {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: particle-float linear infinite;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   CRYSTAL ARENA — New Battle Flow Animations
+══════════════════════════════════════════════════════════ */
+
+/* Crystal projectile — flies right → left (hero on right, enemy on left in RTL) */
+@keyframes crystal-shoot-hit {
+  0%   { left: 72%; opacity: 1; transform: translateY(-50%) scale(1)   rotate(45deg); }
+  70%  { left: 20%; opacity: 1; transform: translateY(-50%) scale(1.4) rotate(45deg); }
+  85%  { left: 14%; opacity: 0.6; transform: translateY(-50%) scale(0.8) rotate(45deg); }
+  100% { left: 12%; opacity: 0; transform: translateY(-50%) scale(0.2) rotate(45deg); }
+}
+.crystal-shoot-hit {
+  animation: crystal-shoot-hit 0.62s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Crystal miss — flies right → bounces back right */
+@keyframes crystal-shoot-miss {
+  0%   { left: 72%; opacity: 1; transform: translateY(-50%) rotate(-45deg) scale(1); }
+  45%  { left: 46%; opacity: 1; transform: translateY(-50%) rotate(-45deg) scale(1); }
+  55%  { left: 46%; opacity: 1; transform: translateY(-60%) rotate(-90deg) scale(1.2); }
+  80%  { left: 62%; opacity: 0.6; transform: translateY(-30%) rotate(-135deg) scale(0.7); }
+  100% { left: 72%; opacity: 0; transform: translateY(-50%) rotate(-180deg) scale(0.3); }
+}
+.crystal-shoot-miss {
+  animation: crystal-shoot-miss 0.72s ease-out forwards;
+}
+
+/* Enemy takes a hit — shake + flash */
+@keyframes enemy-hit-shake {
+  0%   { transform: translateX(0)    scale(1);    filter: brightness(1); }
+  20%  { transform: translateX(-8px) scale(0.96); filter: brightness(3) saturate(0.3); }
+  40%  { transform: translateX(6px)  scale(0.98); filter: brightness(2); }
+  70%  { transform: translateX(-3px) scale(1);    filter: brightness(1.4); }
+  100% { transform: translateX(0)    scale(1);    filter: brightness(1); }
+}
+.enemy-crystal-hit { animation: enemy-hit-shake 0.45s ease-out; }
+
+/* Enemy blocks — brief pulse shield */
+@keyframes enemy-shield-block {
+  0%   { filter: brightness(1); }
+  30%  { filter: brightness(1.5) hue-rotate(30deg); }
+  100% { filter: brightness(1); }
+}
+.enemy-crystal-block { animation: enemy-shield-block 0.5s ease-out; }
+
+/* Feedback badge — пOP in */
+@keyframes feedback-pop {
+  0%   { transform: scale(0.5) translateY(10px); opacity: 0; }
+  60%  { transform: scale(1.12) translateY(-4px); opacity: 1; }
+  100% { transform: scale(1)   translateY(0);     opacity: 1; }
+}
+.feedback-pop { animation: feedback-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+/* Victory screen */
+@keyframes victory-entrance {
+  0%   { transform: scale(0.4) rotate(-5deg); opacity: 0; }
+  65%  { transform: scale(1.08) rotate(2deg);  opacity: 1; }
+  100% { transform: scale(1)    rotate(0deg);  opacity: 1; }
+}
+.victory-entrance { animation: victory-entrance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+@keyframes victory-sparkle {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50%       { opacity: 1;   transform: scale(1.3); }
+}
+.victory-sparkle { animation: victory-sparkle 1s ease-in-out infinite; }
+
+/* Enemy defeated — fades and shrinks away */
+@keyframes enemy-defeat {
+  0%   { opacity: 1;   transform: scale(1)   rotate(0deg);  filter: brightness(1); }
+  30%  { opacity: 0.8; transform: scale(1.1) rotate(-5deg); filter: brightness(3) saturate(0.2); }
+  100% { opacity: 0;   transform: scale(0.1) rotate(25deg); filter: brightness(0); }
+}
+.enemy-defeat { animation: enemy-defeat 1.2s ease-in forwards; }
+
+/* Hero moves to center after victory */
+@keyframes hero-victory-rise {
+  0%   { transform: translateY(20px) scale(0.9); opacity: 0.6; filter: drop-shadow(0 0 6px rgba(140,80,255,0.4)); }
+  60%  { transform: translateY(-6px) scale(1.08); }
+  100% { transform: translateY(0)    scale(1);    opacity: 1;   filter: drop-shadow(0 0 28px rgba(140,80,255,0.9)) drop-shadow(0 0 10px white); }
+}
+.hero-victory-rise { animation: hero-victory-rise 0.8s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+/* Hero idle glow pulse */
+@keyframes hero-arena-idle {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(140,80,255,0.4)); }
+  50%       { filter: drop-shadow(0 0 16px rgba(140,80,255,0.75)); }
+}
+.hero-arena-idle { animation: hero-arena-idle 2.2s ease-in-out infinite; }
+
+/* Challenge bottom sheet */
+@keyframes sheet-rise {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.sheet-rise { animation: sheet-rise 0.34s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
+
+/* Mega hit flash */
+@keyframes mega-crystal-blast {
+  0%   { transform: scale(1);   opacity: 1; filter: brightness(1); }
+  30%  { transform: scale(2.5); opacity: 0.9; filter: brightness(4) saturate(0); }
+  100% { transform: scale(4);   opacity: 0; filter: brightness(1); }
+}
+.mega-crystal-blast { animation: mega-crystal-blast 0.6s ease-out forwards; }
