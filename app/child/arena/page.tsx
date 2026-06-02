@@ -1420,8 +1420,11 @@ function ArenaPageContent() {
       // No Enter, no click, no wait — the moment the enemy reaches the hero, the
       // question opens. handleFireCrystal early-returns if phase !== "battle", so
       // re-entries during challenge/shooting/feedback are naturally suppressed.
+      // Wizard teleports to safeRadius (KEEP_DIST+4..KEEP_DIST+12), so its contact
+      // radius must include that band — otherwise it would never trigger.
+      const CONTACT_DIST = v === "wizard" ? KEEP_DIST_CLAMP + 18 : KEEP_DIST_CLAMP + 2;
       if (phase === "battle" && !isPending && !bossDefeated && age > 0.5) {
-        if (dist <= KEEP_DIST_CLAMP + 1.5 && now - lastContactRef.current > 400) {
+        if (dist <= CONTACT_DIST && now - lastContactRef.current > 400) {
           lastContactRef.current = now;
           handleFireCrystalRef.current?.();
         }
@@ -1525,10 +1528,11 @@ function ArenaPageContent() {
       }
     }
     playSound("shoot");
+    // Open the question immediately on contact — no waiting.
     setIsAttacking(true);
+    setPhase("challenge");
     attackTimerRef.current = setTimeout(() => {
       setIsAttacking(false);
-      setPhase("challenge");
     }, 600);
   }
 
