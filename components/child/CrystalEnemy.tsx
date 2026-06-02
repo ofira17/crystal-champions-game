@@ -16,7 +16,7 @@ const VARIANT_META: Record<EnemyVariant, { nameHe: string; glow: string; size: n
   goblin: { nameHe: "גובלין השאלות",  glow: "rgba(74, 222, 128, 0.75)",  size: 110 },
   bat:    { nameHe: "עטלף הטעויות",   glow: "rgba(167, 139, 250, 0.80)", size: 130 },
   giant:  { nameHe: "ענק הזיכרון",     glow: "rgba(251, 113,  30, 0.90)", size: 180 },
-  wizard: { nameHe: "קוסם הבלבול",     glow: "rgba(56, 189, 248, 0.80)",  size: 120 },
+  wizard: { nameHe: "קוסם הבלבול",     glow: "rgba(168, 85, 247, 0.85)",  size: 120 },
 };
 
 function worldToVariant(worldId: string | null): EnemyVariant {
@@ -96,12 +96,22 @@ function GoblinSVG({ hopPhase = 0 }: { hopPhase?: number }) {
       <path d={`M42 ${38 - hop} Q50 44 58 ${38 - hop} L56 ${40 - hop} L54 ${42 - hop} L50 ${40 - hop} L46 ${42 - hop} L44 ${40 - hop} Z`} fill="#1a1208" />
       <path d={`M46 ${39 - hop} L46 ${43 - hop} M54 ${39 - hop} L54 ${43 - hop}`} stroke="white" strokeWidth="1.2" />
 
-      {/* spiky wooden club in right hand */}
-      <rect x="72" y={50 - hop} width="3.5" height="18" fill="#78350f" stroke="#3a1a08" strokeWidth="0.8" transform={`rotate(25 73.5 ${59 - hop})`} />
-      <circle cx="80" cy={48 - hop} r="5" fill="#78350f" stroke="#3a1a08" strokeWidth="1" />
-      <circle cx="82" cy={45 - hop} r="1.2" fill="#3a1a08" />
-      <circle cx="78" cy={50 - hop} r="1.2" fill="#3a1a08" />
-      <circle cx="83" cy={50 - hop} r="1.2" fill="#3a1a08" />
+      {/* floating glowing question mark — Question Goblin signature */}
+      <g transform={`translate(78 ${42 - hop})`}>
+        <circle cx="0" cy="0" r="11" fill="rgba(253,224,71,0.25)" />
+        <text
+          x="0" y="5"
+          textAnchor="middle"
+          fontSize="18"
+          fontFamily="Impact, 'Arial Black', sans-serif"
+          fontWeight="900"
+          fill="#fde047"
+          stroke="#3a1a08"
+          strokeWidth="1.2"
+        >?</text>
+      </g>
+      {/* right hand reaching up holding the question mark */}
+      <path d={`M66 ${56 - hop} Q74 50 76 ${44 - hop}`} stroke="#4d7c0f" strokeWidth="4" fill="none" strokeLinecap="round" />
 
       {/* left hand */}
       <circle cx="28" cy={62 - hop} r="4.5" fill="#4d7c0f" stroke="#14532d" strokeWidth="1.2" />
@@ -265,18 +275,18 @@ function WizardSVG({ phasing = 0 }: { phasing?: number }) {
     <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ overflow: "visible", opacity: 1 - phasing * 0.55 }}>
       <defs>
         <linearGradient id="wizRobe" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"  stopColor="#38bdf8" />
-          <stop offset="55%" stopColor="#1e3a8a" />
-          <stop offset="100%" stopColor="#0c0a2a" />
+          <stop offset="0%"  stopColor="#c084fc" />
+          <stop offset="55%" stopColor="#7e22ce" />
+          <stop offset="100%" stopColor="#2e1065" />
         </linearGradient>
         <linearGradient id="wizHat" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"  stopColor="#1e3a8a" />
-          <stop offset="100%" stopColor="#0c0a2a" />
+          <stop offset="0%"  stopColor="#7e22ce" />
+          <stop offset="100%" stopColor="#2e1065" />
         </linearGradient>
         <radialGradient id="orb" cx="0.5" cy="0.5" r="0.6">
           <stop offset="0%"  stopColor="#ffffff" />
-          <stop offset="35%" stopColor="#67e8f9" />
-          <stop offset="100%" stopColor="#0c4a6e" />
+          <stop offset="35%" stopColor="#e9d5ff" />
+          <stop offset="100%" stopColor="#4c1d95" />
         </radialGradient>
       </defs>
 
@@ -284,10 +294,10 @@ function WizardSVG({ phasing = 0 }: { phasing?: number }) {
       <ellipse cx="50" cy="92" rx={16 + phasing * 8} ry={3 + phasing * 2} fill="rgba(56,189,248,0.35)" />
       {phasing > 0.1 && (
         <>
-          <circle cx="32" cy="88" r="1.6" fill="#67e8f9" opacity={phasing} />
-          <circle cx="68" cy="86" r="1.6" fill="#67e8f9" opacity={phasing} />
-          <circle cx="40" cy="94" r="1.2" fill="#67e8f9" opacity={phasing} />
-          <circle cx="60" cy="94" r="1.2" fill="#67e8f9" opacity={phasing} />
+          <circle cx="32" cy="88" r="1.6" fill="#e9d5ff" opacity={phasing} />
+          <circle cx="68" cy="86" r="1.6" fill="#e9d5ff" opacity={phasing} />
+          <circle cx="40" cy="94" r="1.2" fill="#e9d5ff" opacity={phasing} />
+          <circle cx="60" cy="94" r="1.2" fill="#e9d5ff" opacity={phasing} />
         </>
       )}
 
@@ -295,13 +305,13 @@ function WizardSVG({ phasing = 0 }: { phasing?: number }) {
       <path d="M50 36 L66 56 L74 92 Q60 96 50 92 Q40 96 26 92 L34 56 Z"
         fill="url(#wizRobe)" stroke="#0c0a2a" strokeWidth="1.6" />
       {/* robe trim runes */}
-      <path d="M30 80 L70 80" stroke="#67e8f9" strokeWidth="0.8" opacity="0.6" />
-      <circle cx="38" cy="80" r="1" fill="#67e8f9" />
-      <circle cx="50" cy="80" r="1" fill="#67e8f9" />
-      <circle cx="62" cy="80" r="1" fill="#67e8f9" />
+      <path d="M30 80 L70 80" stroke="#e9d5ff" strokeWidth="0.8" opacity="0.6" />
+      <circle cx="38" cy="80" r="1" fill="#e9d5ff" />
+      <circle cx="50" cy="80" r="1" fill="#e9d5ff" />
+      <circle cx="62" cy="80" r="1" fill="#e9d5ff" />
 
       {/* shoulders */}
-      <ellipse cx="50" cy="40" rx="14" ry="5" fill="#1e3a8a" stroke="#0c0a2a" strokeWidth="1.2" />
+      <ellipse cx="50" cy="40" rx="14" ry="5" fill="#7e22ce" stroke="#0c0a2a" strokeWidth="1.2" />
 
       {/* tall pointed hat — wizard signature */}
       <path d="M50 4 L66 38 Q50 42 34 38 Z" fill="url(#wizHat)" stroke="#0c0a2a" strokeWidth="1.6" />
@@ -314,16 +324,16 @@ function WizardSVG({ phasing = 0 }: { phasing?: number }) {
 
       {/* face — dark void under brim, glowing eyes, long white beard */}
       <ellipse cx="50" cy="42" rx="6" ry="5" fill="#020617" />
-      <circle cx="47" cy="42" r="1.4" fill="#67e8f9" />
-      <circle cx="53" cy="42" r="1.4" fill="#67e8f9" />
+      <circle cx="47" cy="42" r="1.4" fill="#e9d5ff" />
+      <circle cx="53" cy="42" r="1.4" fill="#e9d5ff" />
       <circle cx="47" cy="42" r="0.6" fill="white" />
       <circle cx="53" cy="42" r="0.6" fill="white" />
       {/* long beard */}
       <path d="M44 46 Q50 64 56 46 Q54 58 50 60 Q46 58 44 46 Z" fill="#e5e7eb" stroke="#94a3b8" strokeWidth="0.8" />
 
       {/* arms holding staff */}
-      <path d="M34 50 Q22 56 18 72" stroke="#1e3a8a" strokeWidth="6" fill="none" strokeLinecap="round" />
-      <path d="M66 50 Q78 56 82 72" stroke="#1e3a8a" strokeWidth="6" fill="none" strokeLinecap="round" />
+      <path d="M34 50 Q22 56 18 72" stroke="#7e22ce" strokeWidth="6" fill="none" strokeLinecap="round" />
+      <path d="M66 50 Q78 56 82 72" stroke="#7e22ce" strokeWidth="6" fill="none" strokeLinecap="round" />
       {/* hand right */}
       <circle cx="82" cy="72" r="4" fill="#fde68a" stroke="#0c0a2a" strokeWidth="1" />
       <circle cx="18" cy="72" r="4" fill="#fde68a" stroke="#0c0a2a" strokeWidth="1" />
@@ -336,9 +346,9 @@ function WizardSVG({ phasing = 0 }: { phasing?: number }) {
       </circle>
       <circle cx="81.5" cy="18" r="2.5" fill="white" opacity="0.9" />
       {/* sparkles around orb */}
-      <circle cx="74" cy="14" r="0.9" fill="#67e8f9" />
-      <circle cx="90" cy="22" r="0.9" fill="#67e8f9" />
-      <circle cx="84" cy="8"  r="0.9" fill="#67e8f9" />
+      <circle cx="74" cy="14" r="0.9" fill="#e9d5ff" />
+      <circle cx="90" cy="22" r="0.9" fill="#e9d5ff" />
+      <circle cx="84" cy="8"  r="0.9" fill="#e9d5ff" />
     </svg>
   );
 }
