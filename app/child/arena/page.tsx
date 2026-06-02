@@ -1,6 +1,7 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState, useTransition } from "react";
+import { Suspense, useEffect, useRef, useState, useTransition, useCallback } from "react";
+import type React from "react";
 import { useRouter, useSearchParams }                            from "next/navigation";
 import Image                                           from "next/image";
 import {
@@ -889,20 +890,226 @@ function ArenaPageContent() {
     };
   }, [phase]);
 
-  const [heroPos,         setHeroPos]         = useState({ x: 50, y: 59 });
+  // ── Roaming minion system (Brawl-Stars-style live arena) ──────────────────
+  type MinionKind = "chaser" | "circler" | "dodger" | "jumper" | "flyer";
+  interface Minion {
+    id: number;
+    kind: MinionKind;
+    x: number; y: number;          // % position in arena
+    vx: number; vy: number;        // current velocity %/s
+    bobPhase: number;              // for jump/flyer
+    hitUntil: number;              // ms timestamp; knockback / red flash while > now
+    knockX: number; knockY: number;// knockback velocity
+    born: number;
+    color: string;
+    size: number;
+    facingLeft: boolean;
+  }
+  const [minions, setMinions] = useState<Minion[]>([]);
+  const minionsRef = useRef<Minion[]>([]);
+  const minionIdRef = useRef(1);
+  const heroPosForAiRef = useRef({ x: 50, y: 70 });
+
+  // Spawn a minion from outside the arena, heading inward
+  const spawnMinion = useCallback(() => {
+    const kinds: MinionKind[] = ["chaser","circler","dodger","jumper","flyer"];
+    const kind = kinds[Math.floor(Math.random() * kinds.length)];
+    const edge = Math.floor(Math.random() * 4); // 0=top 1=right 2=bottom 3=left
+    let x = 50, y = 50, vx = 0, vy = 0;
+    if (edge === 0)      { x = 10 + Math.random() * 80; y = -8; vy = 6 + Math.random()*4; }
+    else if (edge === 1) { x = 108; y = 20 + Math.random()*60; vx = -(6 + Math.random()*4); }
+    else if (edge === 2) { x = 10 + Math.random() * 80; y = 108; vy = -(6 + Math.random()*4); }
+    else                 { x = -8; y = 20 + Math.random()*60; vx = 6 + Math.random()*4; }
+    const colors = ["#22d3ee","#a78bfa","#f472b6","#fbbf24","#34d399","#f97316","#60a5fa"];
+    const m: Minion = {
+      id: minionIdRef.current++,
+      kind,
+      x, y, vx, vy,
+      bobPhase: Math.random() * Math.PI * 2,
+      hitUntil: 0,
+      knockX: 0, knockY: 0,
+      born: performance.now(),
+      color: colors[Math.floor(Math.random()*colors.length)],
+      size: kind === "flyer" ? 38 : kind === "jumper" ? 44 : 48,
+      facingLeft: vx < 0,
+    };
+    minionsRef.current = [...minionsRef.current, m];
+    setMinions(minionsRef.current);
+  }, []);
+
+  // Initialize / clear minions per battle phase
+  useEffect(() => {
+    if (phase !== "battle" && phase !== "challenge" && phase !== "shooting") {
+      minionsRef.current = [];
+      setMinions([]);
+      return;
+    }
+    // Seed three minions on entering battle (only if empty)
+    if (minionsRef.current.length === 0) {
+      spawnMinion(); spawnMinion(); spawnMinion();
+    }
+  }, [phase, spawnMinion]);
+
+  // Periodic spawner so arena stays alive (cap at 5)
+  useEffect(() => {
+    if (phase !== "battle" && phase !== "challenge") return;
+    const id = setInterval(() => {
+      if (minionsRef.current.length < 5) spawnMinion();
+    }, 2600);
+    return () => clearInterval(id);
+  }, [phase, spawnMinion]);
+
+  // Minion AI tick (RAF) — chase / circle / dodge / jump / fly with curved paths
+  const minionRafRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (phase !== "battle" && phase !== "challenge") {
+      if (minionRafRef.current !== null) cancelAnimationFrame(minionRafRef.current);
+      minionRafRef.current = null;
+      return;
+    }
+    let last = performance.now();
+    const tick = () => {
+      const now = performance.now();
+      const dt  = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      const hx = heroPosForAiRef.current.x;
+      const hy = heroPosForAiRef.current.y;
+      let changed = false;
+      const next: Minion[] = [];
+      for (const m of minionsRef.current) {
+        const age = (now - m.born) / 1000;
+        const dxh = hx - m.x;
+        const dyh = hy - m.y;
+        const dist = Math.hypot(dxh, dyh) || 0.0001;
+        const ux = dxh / dist, uy = dyh / dist;
+
+        // Per-kind desired velocity (%/sec)
+        let dvx = m.vx, dvy = m.vy;
+        const SPEED = 14;
+        if (m.kind === "chaser") {
+          const wobble = Math.sin(age * 2.3 + m.bobPhase) * 6;
+          dvx = ux * SPEED + (-uy) * wobble;
+          dvy = uy * SPEED + ( ux) * wobble;
+        } else if (m.kind === "circler") {
+          // orbit hero at target radius ~22
+          const targetR = 22;
+          const radial = (dist - targetR);
+          const tangX = -uy, tangY = ux;
+          dvx = ux * radial * 2.0 + tangX * SPEED * 1.1;
+          dvy = uy * radial * 2.0 + tangY * SPEED * 1.1;
+        } else if (m.kind === "dodger") {
+          // sidesteps perpendicular to hero with sinusoidal lateral motion
+          const lateral = Math.sin(age * 3.1 + m.bobPhase) * SPEED * 1.4;
+          const approach = dist > 28 ? SPEED * 0.9 : -SPEED * 0.4;
+          dvx = ux * approach + (-uy) * lateral;
+          dvy = uy * approach + ( ux) * lateral;
+        } else if (m.kind === "jumper") {
+          // hops along curved arcs toward hero
+          const hop = Math.abs(Math.sin(age * 4.2 + m.bobPhase));
+          const arc = Math.cos(age * 2.0 + m.bobPhase) * 8;
+          dvx = ux * SPEED * (0.6 + hop * 0.9) + arc;
+          dvy = uy * SPEED * (0.6 + hop * 0.9) - hop * 6;
+        } else { // flyer — wide curved swoops, ignores hero gravity, weaves
+          const sw = Math.sin(age * 1.5 + m.bobPhase);
+          const cw = Math.cos(age * 1.2 + m.bobPhase * 0.7);
+          dvx = sw * SPEED * 1.2 + ux * 4;
+          dvy = cw * SPEED * 0.9 + uy * 3 - 2; // tend upward
+        }
+
+        // Smooth toward desired velocity
+        let vx = m.vx + (dvx - m.vx) * Math.min(1, dt * 4);
+        let vy = m.vy + (dvy - m.vy) * Math.min(1, dt * 4);
+
+        // Knockback while hit
+        if (now < m.hitUntil) {
+          vx += m.knockX;
+          vy += m.knockY;
+          m.knockX *= 0.85;
+          m.knockY *= 0.85;
+        }
+
+        let nx = m.x + vx * dt;
+        let ny = m.y + vy * dt;
+
+        // Bounce softly off arena edges (except first 1.2s where they enter)
+        if (age > 1.2) {
+          if (nx < 3)  { nx = 3;  vx = Math.abs(vx) * 0.8; }
+          if (nx > 97) { nx = 97; vx = -Math.abs(vx) * 0.8; }
+          if (ny < 4)  { ny = 4;  vy = Math.abs(vy) * 0.8; }
+          if (ny > 92) { ny = 92; vy = -Math.abs(vy) * 0.8; }
+        }
+
+        // Reflect across hero so they don't sit on top — minimum stand-off
+        if (dist < 10 && m.kind !== "jumper") {
+          nx -= ux * (10 - dist);
+          ny -= uy * (10 - dist);
+        }
+
+        const facingLeft = vx < -0.2 ? true : vx > 0.2 ? false : m.facingLeft;
+        if (
+          nx !== m.x || ny !== m.y ||
+          vx !== m.vx || vy !== m.vy ||
+          facingLeft !== m.facingLeft
+        ) changed = true;
+        next.push({ ...m, x: nx, y: ny, vx, vy, facingLeft });
+      }
+      if (changed) {
+        minionsRef.current = next;
+        setMinions(next);
+      }
+      minionRafRef.current = requestAnimationFrame(tick);
+    };
+    minionRafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (minionRafRef.current !== null) cancelAnimationFrame(minionRafRef.current);
+      minionRafRef.current = null;
+    };
+  }, [phase]);
+
+  // React to a hero shot — knockback nearest minion, replace it after a beat
+  function reactMinionsToShot(isCorrect: boolean) {
+    const hx = heroPosRef.current.x, hy = heroPosRef.current.y;
+    let best: Minion | null = null;
+    let bestD = Infinity;
+    for (const m of minionsRef.current) {
+      const d = Math.hypot(m.x - hx, m.y - hy);
+      if (d < bestD) { bestD = d; best = m; }
+    }
+    if (!best) return;
+    const target = best;
+    const ux = (target.x - hx) / (bestD || 1);
+    const uy = (target.y - hy) / (bestD || 1);
+    minionsRef.current = minionsRef.current.map(m =>
+      m.id === target.id
+        ? { ...m, hitUntil: performance.now() + 280, knockX: ux * 60, knockY: uy * 60 }
+        : m
+    );
+    setMinions(minionsRef.current);
+    if (isCorrect) {
+      // Despawn the hit minion shortly after, then spawn a fresh one entering from outside
+      const idToRemove = target.id;
+      setTimeout(() => {
+        minionsRef.current = minionsRef.current.filter(m => m.id !== idToRemove);
+        setMinions(minionsRef.current);
+        spawnMinion();
+      }, 320);
+    }
+  }
+
+  const [heroPos,         setHeroPos]         = useState({ x: 50, y: 70 });
   const [isHeroMoving,    setIsHeroMoving]    = useState(false);
   const [heroFacingLeft,  setHeroFacingLeft]  = useState(false);
   const [isAttacking,     setIsAttacking]     = useState(false);
   const attackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const heroPosRef        = useRef({ x: 50, y: 59 });
+  const heroPosRef        = useRef({ x: 50, y: 70 });
   const isHeroMovingRef   = useRef(false);
   const heroFacingLeftRef = useRef(false);
   const keysRef     = useRef(new Set<string>());
   const dpadRef     = useRef(new Set<string>());
   const enterShootRef = useRef<(() => void) | null>(null);
   const rafRef      = useRef<number | null>(null);
-  const MOVE_SPEED  = 0.35;
-  const HERO_BOUNDS = { xMin: 6, xMax: 88, yMin: 52, yMax: 66 };
+  const MOVE_SPEED  = 0.55;
+  const HERO_BOUNDS = { xMin: 6, xMax: 94, yMin: 30, yMax: 88 };
   // ──────────────────────────────────────────────────────────────────────────
   const sessionRef  = useRef<string>("");
   const heroRef     = useRef<HTMLDivElement>(null);
@@ -997,15 +1204,21 @@ function ArenaPageContent() {
       let moved = false;
       let goingLeft = heroFacingLeftRef.current;
 
-      if (k.has("ArrowLeft")  || k.has("a") || k.has("A") || d.has("left"))  { x -= MOVE_SPEED; moved = true; goingLeft = true;  }
-      if (k.has("ArrowRight") || k.has("d") || k.has("D") || d.has("right")) { x += MOVE_SPEED; moved = true; goingLeft = false; }
-      if (k.has("ArrowUp")    || k.has("w") || k.has("W") || d.has("up"))    { y -= MOVE_SPEED; moved = true; }
-      if (k.has("ArrowDown")  || k.has("s") || k.has("S") || d.has("down"))  { y += MOVE_SPEED; moved = true; }
-
-      if (moved) {
+      let dx = 0, dy = 0;
+      if (k.has("ArrowLeft")  || k.has("a") || k.has("A") || d.has("left"))  { dx -= 1; goingLeft = true;  }
+      if (k.has("ArrowRight") || k.has("d") || k.has("D") || d.has("right")) { dx += 1; goingLeft = false; }
+      if (k.has("ArrowUp")    || k.has("w") || k.has("W") || d.has("up"))    { dy -= 1; }
+      if (k.has("ArrowDown")  || k.has("s") || k.has("S") || d.has("down"))  { dy += 1; }
+      if (dx !== 0 || dy !== 0) {
+        // Normalize so diagonal isn't faster than axial
+        const mag = Math.hypot(dx, dy) || 1;
+        x += (dx / mag) * MOVE_SPEED;
+        y += (dy / mag) * MOVE_SPEED;
+        moved = true;
         x = Math.max(HERO_BOUNDS.xMin, Math.min(HERO_BOUNDS.xMax, x));
         y = Math.max(HERO_BOUNDS.yMin, Math.min(HERO_BOUNDS.yMax, y));
         heroPosRef.current = { x, y };
+        heroPosForAiRef.current = { x, y };
         setHeroPos({ x, y });
       }
       // Only call setState when moving/facing state actually changes
@@ -1074,6 +1287,7 @@ function ArenaPageContent() {
 
       const didHit = res.isCorrect;
       setShootResult(didHit ? "hit" : "miss");
+      reactMinionsToShot(didHit);
 
       // ── Arcade attack animation — driven entirely by server result ────────
       const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
@@ -1519,6 +1733,11 @@ function ArenaPageContent() {
     >
       {/* All arena animation keyframes and classes */}
       <style>{`
+        /* ── Roaming minion wing flap ── */
+        @keyframes minion-flap {
+          0%   { transform: rotate(-18deg) scaleY(0.85); }
+          100% { transform: rotate(22deg)  scaleY(1.05); }
+        }
         /* ── Hero motion ── */
         .hero-anim-idle   { transform: translateY(0px); transition: transform 50ms ease-out; }
         /* Subtle idle bob/sway when standing still — never overrides dash/recoil */
@@ -1858,6 +2077,105 @@ function ArenaPageContent() {
         }}
       >
         {/* Arena map is the background image — no CSS decorations */}
+
+        {/* ── Roaming minions: enter from outside, chase/circle/dodge/jump/fly ── */}
+        {minions.map(m => {
+          const now = performance.now();
+          const isHit = now < m.hitUntil;
+          const age  = (now - m.born) / 1000;
+          const hopY = m.kind === "jumper" ? -Math.abs(Math.sin(age * 4.2 + m.bobPhase)) * 18 : 0;
+          const flyY = m.kind === "flyer"  ? Math.sin(age * 1.6 + m.bobPhase) * 10 : 0;
+          const rot  = m.kind === "flyer"  ? Math.sin(age * 2.0 + m.bobPhase) * 14
+                     : m.kind === "circler" ? (age * 90) % 360
+                     : Math.sin(age * 3 + m.bobPhase) * 6;
+          const shadow = m.kind === "jumper"
+            ? `0 ${Math.max(2, 10 + hopY * 0.6)}px ${Math.max(4, 18 + hopY * 0.4)}px rgba(0,0,0,0.5)`
+            : `0 6px 14px rgba(0,0,0,0.45)`;
+          return (
+            <div
+              key={m.id}
+              style={{
+                position: "absolute",
+                left: `${m.x}%`,
+                top:  `${m.y}%`,
+                transform: `translate(-50%, -50%) translateY(${hopY + flyY}px) rotate(${rot}deg) ${m.facingLeft ? "scaleX(-1)" : ""}`,
+                width:  m.size,
+                height: m.size,
+                pointerEvents: "none",
+                zIndex: 4,
+                transition: isHit ? "filter 0.1s ease" : "none",
+                filter: isHit
+                  ? "brightness(2.2) saturate(0.2) drop-shadow(0 0 12px white)"
+                  : `drop-shadow(0 0 10px ${m.color})`,
+              }}
+            >
+              <div
+                style={{
+                  width: "100%", height: "100%",
+                  borderRadius: m.kind === "flyer" ? "50% 50% 40% 40%" : "30% 70% 30% 70%",
+                  background: `radial-gradient(circle at 35% 30%, white 0%, ${m.color} 35%, rgba(0,0,0,0.55) 100%)`,
+                  boxShadow: shadow + `, inset 0 0 12px rgba(255,255,255,0.4)`,
+                  position: "relative",
+                  border: "2px solid rgba(255,255,255,0.35)",
+                }}
+              >
+                {/* Eyes */}
+                <div style={{
+                  position: "absolute", top: "32%", left: "26%",
+                  width: 7, height: 7, borderRadius: "50%",
+                  background: "white", boxShadow: "0 0 4px rgba(0,0,0,0.7)",
+                }} />
+                <div style={{
+                  position: "absolute", top: "32%", right: "26%",
+                  width: 7, height: 7, borderRadius: "50%",
+                  background: "white", boxShadow: "0 0 4px rgba(0,0,0,0.7)",
+                }} />
+                <div style={{
+                  position: "absolute", top: "34%", left: "30%",
+                  width: 3, height: 3, borderRadius: "50%", background: "#1e1b4b",
+                }} />
+                <div style={{
+                  position: "absolute", top: "34%", right: "30%",
+                  width: 3, height: 3, borderRadius: "50%", background: "#1e1b4b",
+                }} />
+                {/* Wings for flyer */}
+                {m.kind === "flyer" && (
+                  <>
+                    <div style={{
+                      position: "absolute", top: "10%", left: "-40%",
+                      width: "55%", height: "70%",
+                      background: `linear-gradient(135deg, ${m.color}cc, transparent)`,
+                      borderRadius: "60% 30% 60% 30%",
+                      animation: "minion-flap 0.22s ease-in-out infinite alternate",
+                      transformOrigin: "right center",
+                    }} />
+                    <div style={{
+                      position: "absolute", top: "10%", right: "-40%",
+                      width: "55%", height: "70%",
+                      background: `linear-gradient(225deg, ${m.color}cc, transparent)`,
+                      borderRadius: "30% 60% 30% 60%",
+                      animation: "minion-flap 0.22s ease-in-out infinite alternate-reverse",
+                      transformOrigin: "left center",
+                    }} />
+                  </>
+                )}
+              </div>
+              {/* Drop shadow on floor for jumper to sell the height */}
+              {m.kind === "jumper" && (
+                <div style={{
+                  position: "absolute",
+                  bottom: hopY - 6,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  width: m.size * (1 + hopY * 0.01),
+                  height: 6,
+                  background: "radial-gradient(ellipse at center, rgba(0,0,0,0.55), transparent 70%)",
+                  borderRadius: "50%",
+                }} />
+              )}
+            </div>
+          );
+        })}
 
         {/* ── Enemy (top of arena) — drifts on a curved AI path (sin/cos), re-randomized per question ── */}
         <div
