@@ -1219,15 +1219,30 @@ function ArenaPageContent() {
   useEffect(() => {
     if (phase === "battle") {
       const v = enemyVariantRef.current;
-      // pick a random edge to enter from
-      const edge = Math.floor(Math.random() * 4);
-      let x = 50, y = 18;
-      if (edge === 0)      { x = -8;   y = 25 + Math.random() * 40; }
-      else if (edge === 1) { x = 108;  y = 25 + Math.random() * 40; }
-      else if (edge === 2) { x = 20 + Math.random() * 60; y = -8; }
-      else                 { x = 20 + Math.random() * 60; y = -8; }
-      // bat & wizard prefer aerial entry
-      if (v === "bat" || v === "wizard") y = -8 + Math.random() * 10;
+      // Pick an entry point OUTSIDE the arena, per archetype
+      let x = 50, y = -8;
+      if (v === "goblin") {
+        // ground-bound: enters running from left or right edge, on the floor
+        const fromLeft = Math.random() < 0.5;
+        x = fromLeft ? -10 : 110;
+        y = 70 + Math.random() * 14; // ground level
+      } else if (v === "bat") {
+        // aerial: enters from top corners
+        x = Math.random() < 0.5 ? -8 : 108;
+        y = -10 + Math.random() * 12;
+      } else if (v === "giant") {
+        // stomps in from left or right side, mid-height
+        const fromLeft = Math.random() < 0.5;
+        x = fromLeft ? -14 : 114;
+        y = 40 + Math.random() * 30;
+      } else {
+        // wizard appears at a random outside edge then teleports inward
+        const edge = Math.floor(Math.random() * 4);
+        if (edge === 0)      { x = -10;  y = 20 + Math.random() * 50; }
+        else if (edge === 1) { x = 110;  y = 20 + Math.random() * 50; }
+        else if (edge === 2) { x = 20 + Math.random() * 60; y = -10; }
+        else                 { x = 20 + Math.random() * 60; y = 100; }
+      }
       enemyStateRef.current.x = x;
       enemyStateRef.current.y = y;
       enemyStateRef.current.vx = 0;
@@ -1259,55 +1274,79 @@ function ArenaPageContent() {
       const v = enemyVariantRef.current;
       const age = (now - s.spawnedAt) / 1000;
 
-      // Per-archetype velocity (in arena %/sec)
+      // Per-archetype velocity (in arena %/sec).
+      // KEEP_DIST = personal space — enemies orbit/approach but never land on the hero's body.
+      const KEEP_DIST =
+        v === "giant"  ? 18 :
+        v === "bat"    ? 16 :
+        v === "wizard" ? 20 : 15;
       let dvx = 0, dvy = 0;
       if (v === "goblin") {
-        // ground chase with hop wobble
-        const SPEED = 18;
-        const wobble = Math.sin(age * 6) * 4;
-        dvx = ux * SPEED + (-uy) * wobble;
-        dvy = uy * SPEED + ( ux) * wobble;
-        s.animPhase = (Math.sin(age * 8) + 1) * 0.5;
+        // Runs along the GROUND with a hopping wobble. Y is pulled toward a ground band.
+        const GROUND_Y = Math.max(62, Math.min(82, hy + 6));
+        const SPEED = 20;
+        // run horizontally toward hero; vertical only nudges toward ground band
+        const dirX = Math.sign(dx) || 1;
+        const approach = dist > KEEP_DIST ? 1 : -0.35;
+        dvx = dirX * SPEED * approach;
+        // hop: small periodic vertical impulse, otherwise settle on ground band
+        const hop = Math.sin(age * 7) * 6;
+        dvy = (GROUND_Y - s.y) * 4 - Math.max(0, Math.sin(age * 7)) * hop;
+        s.animPhase = (Math.sin(age * 7) + 1) * 0.5;
       } else if (v === "bat") {
-        // sinusoidal swoop around the hero
-        const SPEED = 26;
-        const lateral = Math.sin(age * 3.4) * SPEED * 0.7;
-        const approach = dist > 18 ? SPEED : -SPEED * 0.3;
-        dvx = ux * approach + (-uy) * lateral;
-        dvy = uy * approach + ( ux) * lateral - Math.cos(age * 2) * 4;
+        // Curved flying path — figure-8 style swoop that orbits the hero.
+        const SPEED = 24;
+        const tangX = -uy, tangY = ux;
+        const approach = dist > KEEP_DIST ? 1 : -0.4;
+        const swoop = Math.sin(age * 2.6);
+        const curl  = Math.cos(age * 1.7);
+        dvx = ux * SPEED * approach + tangX * SPEED * 0.9 * swoop + curl * 3;
+        dvy = uy * SPEED * approach + tangY * SPEED * 0.9 * swoop - Math.cos(age * 3.2) * 5;
         s.animPhase = (Math.sin(age * 14) + 1) * 0.5;
       } else if (v === "giant") {
-        // slow stomp toward hero
-        const SPEED = 8;
-        const stompKick = Math.abs(Math.sin(age * 2)) > 0.85 ? 1.6 : 1;
-        dvx = ux * SPEED * stompKick;
-        dvy = uy * SPEED * stompKick;
-        s.animPhase = (Math.sin(age * 2) + 1) * 0.5;
+        // Slow stomp from the side. Approach mostly horizontally, never overlap.
+        const SPEED = 7;
+        const stomping = Math.abs(Math.sin(age * 1.8)) > 0.6;
+        const kick = stomping ? 1.5 : 0.4;
+        const approach = dist > KEEP_DIST ? 1 : -0.25;
+        // Bias horizontal motion so it stomps from the side
+        dvx = Math.sign(dx || 1) * SPEED * kick * approach;
+        dvy = uy * SPEED * 0.5 * kick * approach;
+        s.animPhase = (Math.sin(age * 1.8) + 1) * 0.5;
       } else { // wizard
-        // teleport when projectile in flight or cooldown elapsed
+        // Teleport / dash / dodge. Always reappears at a safe distance.
         s.teleportCooldown -= dt;
         const projectileInFlight = showProjectileRef.current;
+        const safeRadius = () => KEEP_DIST + 4 + Math.random() * 8;
         if (projectileInFlight && s.teleportCooldown < 0.3) {
-          // dash sideways to dodge
+          // dash sideways to dodge an incoming shot
           const side = Math.random() < 0.5 ? -1 : 1;
-          s.x += -uy * 18 * side;
-          s.y +=  ux * 12 * side;
-          s.teleportCooldown = 1.4;
+          s.x += -uy * 16 * side;
+          s.y +=  ux * 10 * side;
+          // ensure we didn't dash onto the hero
+          const ndx = hx - s.x, ndy = hy - s.y;
+          const nd  = Math.hypot(ndx, ndy) || 1;
+          if (nd < KEEP_DIST) {
+            s.x = hx - (ndx / nd) * safeRadius();
+            s.y = hy - (ndy / nd) * safeRadius();
+          }
+          s.teleportCooldown = 1.2;
           s.animPhase = 1;
         } else if (s.teleportCooldown <= 0) {
-          // teleport to a fresh angle around hero
+          // teleport to a fresh angle around hero, always outside KEEP_DIST
           const ang = Math.random() * Math.PI * 2;
-          const r = 22 + Math.random() * 10;
+          const r = safeRadius();
           s.x = hx + Math.cos(ang) * r;
           s.y = hy + Math.sin(ang) * r;
-          s.teleportCooldown = 1.8 + Math.random() * 1.4;
+          s.teleportCooldown = 1.6 + Math.random() * 1.2;
           s.animPhase = 1;
         } else {
-          // small drift
-          const SPEED = 10;
+          // small orbital drift between teleports
+          const SPEED = 9;
           const tangX = -uy, tangY = ux;
-          dvx = tangX * SPEED + ux * (dist > 22 ? 4 : -3);
-          dvy = tangY * SPEED + uy * (dist > 22 ? 4 : -3);
+          const approach = dist > KEEP_DIST + 4 ? 3 : -3;
+          dvx = tangX * SPEED + ux * approach;
+          dvy = tangY * SPEED + uy * approach;
           s.animPhase = Math.max(0, s.animPhase - dt * 2.5);
         }
       }
@@ -1317,6 +1356,29 @@ function ArenaPageContent() {
       s.vy = s.vy + (dvy - s.vy) * Math.min(1, dt * 5);
       s.x += s.vx * dt;
       s.y += s.vy * dt;
+
+      // Hard personal-space clamp — never let the enemy stand on the hero's body.
+      // Uses the same KEEP_DIST so each archetype keeps its own comfortable distance.
+      const KEEP_DIST_CLAMP =
+        v === "giant"  ? 17 :
+        v === "bat"    ? 15 :
+        v === "wizard" ? 18 : 14;
+      if (age > 0.6) {
+        const ddx = s.x - hx;
+        const ddy = s.y - hy;
+        const dd  = Math.hypot(ddx, ddy);
+        if (dd < KEEP_DIST_CLAMP) {
+          const nd = dd || 0.0001;
+          s.x = hx + (ddx / nd) * KEEP_DIST_CLAMP;
+          s.y = hy + (ddy / nd) * KEEP_DIST_CLAMP;
+          // bleed velocity that was pushing into the hero
+          const into = (s.vx * (-ddx / nd) + s.vy * (-ddy / nd));
+          if (into > 0) {
+            s.vx -= into * (-ddx / nd);
+            s.vy -= into * (-ddy / nd);
+          }
+        }
+      }
 
       // Soft bounds after spawn-in
       if (age > 1.0) {
