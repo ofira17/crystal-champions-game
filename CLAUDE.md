@@ -51,6 +51,7 @@ Arena: `app/child/arena/page.tsx`
 ## QA Rules
 
 - Visual issues must be verified in the **real production arena** at https://crystal-champions-game.vercel.app/child/arena, not only by reading code.
+- **All child profiles must be tested, not only child 1.** Arena entry must work for child 2+ when they have an available challenge. The arena button must be enabled for any child in `hero_training` or `world_mysteries` mode, even if no `child_missions` row exists for them.
 
 ## Battle Visual Requirements
 

@@ -331,23 +331,45 @@ async function selectQuestionsForArena(
 // START ARENA SESSION
 // ══════════════════════════════════════════════════════════
 
+// Sentinel IDs used when no child_missions row exists (hero_training / world_mysteries mode).
+const AUTO_MISSION_SENTINELS = new Set(["hero_training", "world_mysteries"]);
+
 export async function startArenaSession(
   missionId: string
 ): Promise<ActionResult<ArenaStartData>> {
   const { child, supabase, error } = await getChildProfile();
   if (error || !child) return { success: false, error: error ?? "שגיאה" };
 
-  // Validate mission belongs to this child and is active (admin bypasses RLS)
   const admin = createAdminClient();
-  const { data: mission } = await admin
-    .from("child_missions")
-    .select("id, title_he, story_text_he, practice_set_id, selection_strategy, questions_per_run")
-    .eq("id", missionId)
-    .eq("child_id", child.id)
-    .eq("status", "active")
-    .single();
 
-  if (!mission) return { success: false, error: "הרפתקה לא נמצאה או אינה פעילה" };
+  // ── Determine mission source ──────────────────────────────────────────────────
+  // hero_training / world_mysteries: no child_missions row — go straight to auto-questions.
+  // All other IDs: validate against child_missions (admin bypasses RLS).
+  const isAutoMode = AUTO_MISSION_SENTINELS.has(missionId);
+
+  let missionDbId:            string | null = null;
+  let missionTitleHe:         string        = missionId === "world_mysteries" ? "תעלומות עולם" : "אימון גיבורים";
+  let missionStoryTextHe:     string | null = null;
+  let missionSelectionStrategy: string      = "random";
+  let missionQuestionsPerRun: number        = 10;
+
+  if (!isAutoMode) {
+    const { data: mission } = await admin
+      .from("child_missions")
+      .select("id, title_he, story_text_he, practice_set_id, selection_strategy, questions_per_run")
+      .eq("id", missionId)
+      .eq("child_id", child.id)
+      .eq("status", "active")
+      .single();
+
+    if (!mission) return { success: false, error: "הרפתקה לא נמצאה או אינה פעילה" };
+
+    missionDbId              = mission.id;
+    missionTitleHe           = mission.title_he;
+    missionStoryTextHe       = mission.story_text_he ?? null;
+    missionSelectionStrategy = mission.selection_strategy;
+    missionQuestionsPerRun   = mission.questions_per_run;
+  }
 
   // Determine world
   let worldId: string | null = child.current_world_id ?? null;
@@ -375,7 +397,6 @@ export async function startArenaSession(
 
     if (wp?.is_unlocked) {
       if (wp.is_completed && wp.boss_hp_remaining === 0) {
-        // Boss already defeated — reset for replay
         await admin.rpc("reset_boss", { p_child_id: child.id, p_world_id: worldId });
         currentBossHp = 100;
       } else {
@@ -384,32 +405,42 @@ export async function startArenaSession(
     }
   }
 
-  // Select questions (server-side, strategy applied here)
-  const questionIds = await selectQuestionsForArena(
-    supabase, child.id, mission.id, mission.practice_set_id,
-    mission.selection_strategy, mission.questions_per_run
-  );
-
   let questions:     ArenaQuestion[] = [];
   let autoQuestions: AutoQuestion[]  = [];
   let questionIdsForSession: string[] = [];
 
-  if (questionIds.length > 0) {
-    // ── Normal path: parent-uploaded DB-backed questions ─────────────────────────
-    const { data: questionsRaw } = await admin
-      .from("questions")
-      .select("id, text_he, option_a_he, option_b_he, option_c_he, option_d_he, difficulty")
-      .in("id", questionIds);
+  if (!isAutoMode && missionDbId) {
+    // ── DB-backed mission path ────────────────────────────────────────────────────
+    const { data: missionFull } = await admin
+      .from("child_missions")
+      .select("practice_set_id")
+      .eq("id", missionDbId)
+      .single();
 
-    // Preserve selected order
-    questions = questionIds
-      .map(id => questionsRaw?.find(q => q.id === id))
-      .filter((q): q is ArenaQuestion => !!q);
+    const questionIds = missionFull
+      ? await selectQuestionsForArena(
+          supabase, child.id, missionDbId, missionFull.practice_set_id,
+          missionSelectionStrategy, missionQuestionsPerRun
+        )
+      : [];
 
-    questionIdsForSession = questionIds;
-  } else {
-    // ── Fallback path: no parent questions exist → generate age/grade-based pool ──
-    // Reads child grade from child_mission_config (falls back to child_profiles).
+    if (questionIds.length > 0) {
+      const { data: questionsRaw } = await admin
+        .from("questions")
+        .select("id, text_he, option_a_he, option_b_he, option_c_he, option_d_he, difficulty")
+        .in("id", questionIds);
+
+      questions = questionIds
+        .map(id => questionsRaw?.find(q => q.id === id))
+        .filter((q): q is ArenaQuestion => !!q);
+
+      questionIdsForSession = questionIds;
+    }
+  }
+
+  // Auto-questions: used for hero_training/world_mysteries mode AND as fallback
+  // when a DB-backed mission has no questions in its practice set.
+  if (questions.length === 0) {
     let grade = 3;
     const { data: cfg } = await admin
       .from("child_mission_config")
@@ -428,12 +459,11 @@ export async function startArenaSession(
       if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 6) grade = parsed;
     }
 
-    autoQuestions = await generateAutoArenaQuestions(grade, mission.questions_per_run);
+    autoQuestions = await generateAutoArenaQuestions(grade, missionQuestionsPerRun);
     if (autoQuestions.length === 0) {
       return { success: false, error: "אין שאלות זמינות להרפתקה" };
     }
 
-    // Strip correct_answer + explanation before exposing to client
     questions = autoQuestions.map(q => ({
       id:          q.id,
       text_he:     q.text_he,
@@ -449,13 +479,12 @@ export async function startArenaSession(
     return { success: false, error: "אין שאלות זמינות להרפתקה" };
   }
 
-  // Create game session — auto_questions holds the full server-side payload
-  // (with correct_answer) for the fallback path; question_ids stays [] for it.
+  // Create game session (mission_id is nullable — null for hero_training/world_mysteries)
   const { data: session } = await admin
     .from("game_sessions")
     .insert({
       child_id:          child.id,
-      mission_id:        mission.id,
+      mission_id:        missionDbId,
       world_id:          worldId,
       questions_per_run: questions.length,
       question_ids:      questionIdsForSession,
@@ -466,7 +495,7 @@ export async function startArenaSession(
 
   if (!session) return { success: false, error: "שגיאה ביצירת ריצת הזירה" };
 
-  const bossDamagePerCorrect = Math.floor(100 / mission.questions_per_run);
+  const bossDamagePerCorrect = Math.floor(100 / missionQuestionsPerRun);
 
   // Fetch selected hero for arena display
   let heroName       = "הגיבור שלי";
@@ -501,10 +530,10 @@ export async function startArenaSession(
     bossDamagePerCorrect,
     currentBossHp,
     currentEnergy:      child.energy,
-    arenaThreat:        mapStrategyToArenaThreat(mission.selection_strategy),
+    arenaThreat:        mapStrategyToArenaThreat(missionSelectionStrategy),
     worldId,
-    adventureTitle:     mission.title_he,
-    storyText:          mission.story_text_he ?? null,
+    adventureTitle:     missionTitleHe,
+    storyText:          missionStoryTextHe,
     heroName,
     heroGender,
     heroColorTheme,
