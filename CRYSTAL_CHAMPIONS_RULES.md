@@ -84,3 +84,11 @@ Never work from the old repo/folder (`miti-heroquest`) or a stale branch.
 - The real enemy component is `components/child/CrystalEnemy.tsx`.
 - Pushing to `origin` is forbidden. Always push to `canonical`.
 - If you find yourself editing anything under `src/` in the context of arena work, stop immediately and re-verify the project path.
+
+## 18. HARD STOP rule — enforced before every keystroke
+**If you are about to edit `src/pages/Play.tsx` or push to `origin/main` — STOP IMMEDIATELY.**
+Do not write a single line of code. Close the file. Re-verify:
+1. Working directory = `C:\Users\97253\Desktop\קלוד\crystal-champions`
+2. `git remote -v` shows `canonical` pointing to `crystal-champions-game.git`
+3. File to edit = `app/child/arena/page.tsx`
+Violations of this rule have occurred before and waste significant time. There is no scenario where `src/pages/Play.tsx` is correct for Crystal Champions arena work.

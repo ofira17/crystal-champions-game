@@ -1618,32 +1618,25 @@ function ArenaPageContent() {
         // 3. Hero recoils — projectile launches simultaneously.
         // Hero faces the enemy: mirror sprite based on enemy-x vs hero-x.
         setHeroAnim("recoil");
-        if (heroRef.current && enemyRef.current && arenaRef.current) {
-          const heroRect  = heroRef.current.getBoundingClientRect();
-          const enemyRect = enemyRef.current.getBoundingClientRect();
-          const arenaRect = arenaRef.current.getBoundingClientRect();
-          const heroCenterX = heroRect.left + heroRect.width / 2;
-          const heroCenterY = heroRect.top  + heroRect.height / 2;
-          const enemyCenterX = enemyRect.left + enemyRect.width / 2;
-          const enemyCenterY = enemyRect.top  + enemyRect.height / 2;
-          const dxAbs = enemyCenterX - heroCenterX;
-          const dyAbs = enemyCenterY - heroCenterY;
-          // Mirror left/right only when the enemy is meaningfully to one side.
+        if (arenaRef.current) {
+          const aw = arenaRef.current.offsetWidth;
+          const ah = arenaRef.current.offsetHeight;
+          // Origin: Miti sprite center — matches SVG beam hero-end exactly
+          const hxPx = (heroPosRef.current.x / 100) * aw;
+          const hyPx = (heroPosRef.current.y / 100) * ah + 95;
+          // Target: locked enemy center — matches SVG beam enemy-end exactly
+          const exPx = (enemyStateRef.current.x / 100) * aw;
+          const eyPx = (enemyStateRef.current.y / 100) * ah;
+          const dxAbs = exPx - hxPx;
+          const dyAbs = eyPx - hyPx;
           if (Math.abs(dxAbs) > 24) {
-            const goLeft = dxAbs < 0;
-            heroFacingLeftRef.current = goLeft;
-            setHeroFacingLeft(goLeft);
+            heroFacingLeftRef.current = dxAbs < 0;
+            setHeroFacingLeft(dxAbs < 0);
           }
-          // Travel = straight-line distance from hero center to enemy center.
-          const dist = Math.round(Math.hypot(dxAbs, dyAbs));
-          setProjectileTravelPx(dist > 40 ? dist : 160);
-          const heroCenterXInArena = heroCenterX - arenaRect.left;
-          const heroCenterYInArena = heroCenterY - arenaRect.top;
-          setProjectileOriginX((heroCenterXInArena / arenaRect.width) * 100);
-          setProjectileOriginY(((arenaRect.height - heroCenterYInArena) / arenaRect.height) * 100);
-          // Drift = lateral component (positive = rightward).
-          // travelPx is the vertical magnitude consumed by proj-up-* keyframes; we
-          // sign it so an enemy ABOVE travels up, BELOW travels down.
+          // bottom-% origin so projectile is placed at Miti's sprite center
+          setProjectileOriginX((hxPx / aw) * 100);
+          setProjectileOriginY(((ah - hyPx) / ah) * 100);
+          // drift (X) and travel (Y) follow the beam vector exactly
           setProjectileDriftPx(Math.round(dxAbs));
           setProjectileTravelPx(Math.round(-dyAbs));
         }
@@ -1685,14 +1678,24 @@ function ArenaPageContent() {
         setEnemyShake(false);
 
       } else {
-        // Wrong answer — weak/no hit. Hero stumbles in place, no projectile is
-        // launched, and the enemy keeps moving (its AI un-freezes immediately).
+        // Wrong answer — no projectile, no strong shot; enemy blocks with shield.
         setCorrectStreak(0);
         setStrongShot(false);
         setHeroAnim("recoil");
         playSound("wrong");
+        // Shield-block reaction at enemy center
+        if (enemyRef.current && arenaRef.current) {
+          const er = enemyRef.current.getBoundingClientRect();
+          const ar = arenaRef.current.getBoundingClientRect();
+          setEnemyAnchor({
+            top:  er.top  + er.height / 2 - ar.top,
+            left: er.left + er.width  / 2 - ar.left,
+          });
+        }
+        setShieldBlock(true);
         await wait(200);
         setHeroAnim("idle");
+        setShieldBlock(false);
         await wait(150);
       }
 
