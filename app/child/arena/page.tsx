@@ -2754,9 +2754,16 @@ function ArenaPageContent() {
                   height: 190, width: "auto", display: "block",
                   // Attack and idle sprites are directional — no flip needed.
                   // Run uses run-right.png only — flip horizontally when facing left.
+                  // Run sprites have ~30% extra transparent canvas; scale(1.35) compensates so
+                  // Miti appears full size during staging and battle walking.
                   transform: (isAttacking || phase === "shooting" || phase === "feedback")
                     ? "scale(1.18) translateY(-8px)"
-                    : (isHeroMoving && phase === "battle" && heroFacingLeft) ? "scaleX(-1)" : "",
+                    : (isStagingActive || (isHeroMoving && phase === "battle"))
+                    ? (heroFacingLeft ? "scale(-1.35, 1.35)" : "scale(1.35)")
+                    : "",
+                  transformOrigin: (isStagingActive || (isHeroMoving && phase === "battle"))
+                    ? "bottom center"
+                    : "center center",
                   filter: isAttacking
                     ? "drop-shadow(0 0 22px rgba(34,211,238,1)) drop-shadow(0 0 10px white) brightness(1.3)"
                     : phase === "feedback" && feedback?.isCorrect

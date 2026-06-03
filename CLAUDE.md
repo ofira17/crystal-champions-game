@@ -8,6 +8,13 @@ Enemy damage feedback should shrink from full size to 50% while HP > 0, and only
 - Final defeat: `enemy-defeat-seq` CSS class plays crystal-dissolve animation in `victory-anim` phase only
 - Hit reaction (flash + shake): keep `enemy-crystal-hit` class, applies to inner div only
 
+## Miti Size Rule
+
+Miti must keep normal full size during arena staging and battle walking. Only the enemy uses HP-based shrinking.
+- Run sprites (`run-right.png`, `run-right2.png`) have ~30% extra transparent canvas; apply `scale(1.35)` with `transformOrigin: "bottom center"` during staging and running to compensate.
+- `scale(1.35)` during staging/walking, `scale(1.18) translateY(-8px)` during attack — never reduce Miti below 1.0 scale.
+- Do NOT apply enemy HP scaling or any staging shrink to Miti's sprite.
+
 ## Battle Movement Rule
 
 All battle movement happens inside the arena only. Before each question, Miti and the enemy move quickly for ~1 second into battle positions, then the question appears. During this staging period (~1050ms), the contact trigger is blocked so the question cannot open early. Miti walks in from the left edge (x≈11→35), enemy charges in from the right edge at 2.5× normal speed. After staging ends, normal AI and player control resume.
