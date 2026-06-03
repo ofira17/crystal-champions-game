@@ -1438,11 +1438,12 @@ function ArenaPageContent() {
       // re-entries during challenge/shooting/feedback are naturally suppressed.
       // Wizard teleports to safeRadius (KEEP_DIST+4..KEEP_DIST+12), so its contact
       // radius must include that band — otherwise it would never trigger.
-      // Contact trigger — no click/Enter needed. handleFireCrystalRef always has
-      // fresh isPending/bossDefeated from the latest render, so no stale-closure issue.
-      const CONTACT_DIST = v === "wizard" ? KEEP_DIST_CLAMP + 18 : KEEP_DIST_CLAMP + 2;
-      if (phase === "battle" && age > 0.15) {
-        if (dist <= CONTACT_DIST && now - lastContactRef.current > 400) {
+      // Lock trigger — fires as soon as the enemy enters detection range (beam lock).
+      // No body collision required: range is 40 arena-% units so the question opens
+      // the moment the enemy approaches, well before physical contact.
+      const LOCK_DIST = 40;
+      if (phase === "battle" && age > 0.5) {
+        if (dist <= LOCK_DIST && now - lastContactRef.current > 400) {
           lastContactRef.current = now;
           handleFireCrystalRef.current?.();
         }
