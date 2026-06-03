@@ -8,7 +8,9 @@ Enemy damage feedback should shrink from full size to 50% while HP > 0, and only
 - Final defeat: `enemy-defeat-seq` CSS class plays crystal-dissolve animation in `victory-anim` phase only
 - Hit reaction (flash + shake): keep `enemy-crystal-hit` class, applies to inner div only
 
-## Battle Staging Rule
+## Battle Movement Rule
+
+All battle movement happens inside the arena only. Before each question, Miti and the enemy move quickly for ~1 second into battle positions, then the question appears. During this staging period (~1050ms), the contact trigger is blocked so the question cannot open early. Miti walks in from the left edge (x≈8→22), enemy charges in from the right edge at 2.5× normal speed. After staging ends, normal AI and player control resume.
 
 Arena: `app/child/arena/page.tsx`
 

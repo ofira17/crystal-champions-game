@@ -1123,13 +1123,18 @@ function ArenaPageContent() {
   // Contact-throttle so contact doesn't re-trigger during shooting/feedback
   const lastContactRef = useRef(0);
 
-  const [heroPos,         setHeroPos]         = useState({ x: 22, y: 60 });
+  const [heroPos,         setHeroPos]         = useState({ x: 8, y: 60 });
   const [isHeroMoving,    setIsHeroMoving]    = useState(false);
   const [heroFacingLeft,  setHeroFacingLeft]  = useState(false);
   const [isAttacking,     setIsAttacking]     = useState(false);
   const [runFrame,        setRunFrame]        = useState(0); // 0 = run-right.png, 1 = run-right2.png
   const attackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const heroPosRef        = useRef({ x: 22, y: 60 });
+  const heroPosRef        = useRef({ x: 8, y: 60 });
+  // Staging: first ~1s of each battle — hero auto-walks to position, contact blocked
+  const stagingRef        = useRef(true);
+  const [isStagingActive, setIsStagingActive] = useState(true);
+  const HERO_BATTLE_X     = 22;
+  const HERO_BATTLE_Y     = 60;
   const isHeroMovingRef   = useRef(false);
   const heroFacingLeftRef = useRef(false);
   const keysRef     = useRef(new Set<string>());
@@ -1226,6 +1231,15 @@ function ArenaPageContent() {
     if (phase === "battle") {
       // Reset contact throttle so the first contact of every new enemy fires immediately
       lastContactRef.current = 0;
+      // Staging: hero walks in from left edge, contact blocked for ~1s
+      stagingRef.current = true;
+      heroPosRef.current = { x: 8, y: HERO_BATTLE_Y };
+      heroPosForAiRef.current = { x: 8, y: HERO_BATTLE_Y };
+      setHeroPos({ x: 8, y: HERO_BATTLE_Y });
+      setHeroFacingLeft(false);
+      heroFacingLeftRef.current = false;
+      setIsStagingActive(true);
+      const stagingTimer = setTimeout(() => { stagingRef.current = false; setIsStagingActive(false); }, 1050);
       const v = enemyVariantRef.current;
       // Pick an entry point at the arena edge (not outside) so the sprite is never clipped
       let x = 50, y = 8;
@@ -1262,6 +1276,7 @@ function ArenaPageContent() {
       enemyStateRef.current.facingDeg = (Math.atan2(_hdx, -_hdy) * 180) / Math.PI;
       // Force directional sprite (not idle) from the first frame
       enemyStateRef.current.animPhase = 1;
+      return () => clearTimeout(stagingTimer);
     }
   }, [phase, current]);
 
@@ -1364,12 +1379,15 @@ function ArenaPageContent() {
         }
       }
 
+      // During staging (first ~1s): enemy rushes in at 2.5× speed so it visibly charges into arena
+      const stagingBoost = stagingRef.current ? 2.5 : 1;
+
       // Pause/freeze the enemy ONLY while the question is on screen. After the
       // child answers (shooting/feedback), the enemy resumes moving — important
       // so that a wrong answer feels like the enemy "continues" the attack.
       if (phase !== "challenge") {
-        s.vx = s.vx + (dvx - s.vx) * Math.min(1, dt * 5);
-        s.vy = s.vy + (dvy - s.vy) * Math.min(1, dt * 5);
+        s.vx = s.vx + (dvx * stagingBoost - s.vx) * Math.min(1, dt * 5);
+        s.vy = s.vy + (dvy * stagingBoost - s.vy) * Math.min(1, dt * 5);
         s.x += s.vx * dt;
         s.y += s.vy * dt;
       } else {
@@ -1401,8 +1419,8 @@ function ArenaPageContent() {
         }
       }
 
-      // Soft bounds after spawn-in — use dynamic margins so enemy center stays inside
-      if (age > 1.0) {
+      // Soft bounds — keep enemy inside arena at all times including during staging
+      if (age > 0.2) {
         const aw2 = arenaRef.current?.offsetWidth  ?? 700;
         const ah2 = arenaRef.current?.offsetHeight ?? 400;
         const eSz = v === "giant" ? 150 : v === "wizard" ? 130 : v === "bat" ? 120 : 110;
@@ -1441,7 +1459,7 @@ function ArenaPageContent() {
       // No body collision required: range is 40 arena-% units so the question opens
       // the moment the enemy approaches, well before physical contact.
       const LOCK_DIST = 40;
-      if (phase === "battle" && age > 0.5) {
+      if (phase === "battle" && !stagingRef.current && age > 0.5) {
         if (dist <= LOCK_DIST && now - lastContactRef.current > 400) {
           lastContactRef.current = now;
           handleFireCrystalRef.current?.();
@@ -1479,6 +1497,23 @@ function ArenaPageContent() {
       let { x, y } = heroPosRef.current;
       let moved = false;
       let goingLeft = heroFacingLeftRef.current;
+
+      // During staging: hero auto-walks right to battle position, ignore player input
+      if (stagingRef.current) {
+        if (x < HERO_BATTLE_X - 0.3) {
+          x = Math.min(x + MOVE_SPEED * 1.8, HERO_BATTLE_X);
+          y = HERO_BATTLE_Y;
+          moved = true;
+          goingLeft = false;
+          heroPosRef.current = { x, y };
+          heroPosForAiRef.current = { x, y };
+          setHeroPos({ x, y });
+        }
+        if (moved !== isHeroMovingRef.current) { isHeroMovingRef.current = moved; setIsHeroMoving(moved); }
+        if (goingLeft !== heroFacingLeftRef.current) { heroFacingLeftRef.current = goingLeft; setHeroFacingLeft(goingLeft); }
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
 
       let dx = 0, dy = 0;
       if (k.has("ArrowLeft")  || k.has("a") || k.has("A") || d.has("left"))  { dx -= 1; }
@@ -2040,6 +2075,8 @@ function ArenaPageContent() {
         }
         /* ── Hero motion ── */
         .hero-anim-idle   { transform: translateY(0px); transition: transform 50ms ease-out; }
+        /* Staging entry walk — plays while hero auto-walks to battle position */
+        .hero-staging-walk { animation: hero-running-bob 0.24s ease-in-out infinite; }
         /* Subtle idle bob/sway when standing still — never overrides dash/recoil */
         .hero-idle-bob    { animation: hero-idle-bob 2.6s ease-in-out infinite; }
         @keyframes hero-idle-bob {
@@ -2688,6 +2725,8 @@ function ArenaPageContent() {
               className={
                 heroAnim !== "idle"
                   ? `hero-anim-${heroAnim}`
+                  : isStagingActive
+                  ? "hero-staging-walk"
                   : (isHeroMoving && phase === "battle")
                   ? "hero-running-bob"
                   : (!isAttacking ? "hero-idle-bob" : "")
@@ -2703,6 +2742,8 @@ function ArenaPageContent() {
                     const ex = enemyStateRef.current.x;
                     return ex < heroPos.x ? "/sprites/miti/attack-left.png" : "/sprites/miti/attack-right.png";
                   }
+                  if (isStagingActive)
+                    return runFrame === 0 ? "/sprites/miti/run-right.png" : "/sprites/miti/run-right2.png";
                   if (isHeroMoving && phase === "battle")
                     return runFrame === 0 ? "/sprites/miti/run-right.png" : "/sprites/miti/run-right2.png";
                   // Idle sprites are directional — face toward enemy, no flip needed
