@@ -62,3 +62,11 @@ Do not modify any of the following unless explicitly requested:
 
 ## 14. READY definition
 Never report READY unless the **canonical production URL** actually serves the intended change.
+
+## 15. Verify canonical repo before any work
+Before any asset or code work, verify:
+1. Current folder is `crystal-champions` (canonical repo, not `miti-heroquest` or any other).
+2. `git remote -v` shows `canonical https://github.com/ofira17/crystal-champions-game.git`.
+3. Active branch is `main`.
+4. `git pull canonical main` is up to date.
+Never work from the old repo/folder (`miti-heroquest`) or a stale branch.
