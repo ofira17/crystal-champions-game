@@ -1127,6 +1127,7 @@ function ArenaPageContent() {
   const [isHeroMoving,    setIsHeroMoving]    = useState(false);
   const [heroFacingLeft,  setHeroFacingLeft]  = useState(false);
   const [isAttacking,     setIsAttacking]     = useState(false);
+  const [runFrame,        setRunFrame]        = useState(0); // 0 = run-right.png, 1 = run-right2.png
   const attackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const heroPosRef        = useRef({ x: 50, y: 55 });
   const isHeroMovingRef   = useRef(false);
@@ -1431,8 +1432,10 @@ function ArenaPageContent() {
       // re-entries during challenge/shooting/feedback are naturally suppressed.
       // Wizard teleports to safeRadius (KEEP_DIST+4..KEEP_DIST+12), so its contact
       // radius must include that band — otherwise it would never trigger.
+      // Contact trigger — no click/Enter needed. handleFireCrystalRef always has
+      // fresh isPending/bossDefeated from the latest render, so no stale-closure issue.
       const CONTACT_DIST = v === "wizard" ? KEEP_DIST_CLAMP + 18 : KEEP_DIST_CLAMP + 2;
-      if (phase === "battle" && !isPending && !bossDefeated && age > 0.5) {
+      if (phase === "battle" && age > 0.5) {
         if (dist <= CONTACT_DIST && now - lastContactRef.current > 400) {
           lastContactRef.current = now;
           handleFireCrystalRef.current?.();
@@ -1519,6 +1522,13 @@ function ArenaPageContent() {
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
+
+  // ── Run frame animation: alternate between run-right.png and run-right2.png ──
+  useEffect(() => {
+    if (!isHeroMoving) { setRunFrame(0); return; }
+    const id = setInterval(() => setRunFrame(f => (f + 1) % 2), 140);
+    return () => clearInterval(id);
+  }, [isHeroMoving]);
 
   // ── Sound ─────────────────────────────────────────────────────────────────
   function playSound(name: string) {
@@ -2622,10 +2632,10 @@ function ArenaPageContent() {
               <img
                 src={
                   isAttacking
-                    ? "/sprites/miti/attack-right.png"   // crystal throw; mirrored below for left-facing
+                    ? "/sprites/miti/attack-right.png"
                     : isHeroMoving
-                    ? "/sprites/miti/run-right2.png"      // run; mirrored below for left-facing
-                    : "/sprites/miti/idle-front.png"      // idle front
+                    ? (runFrame === 0 ? "/sprites/miti/run-right.png" : "/sprites/miti/run-right2.png")
+                    : "/sprites/miti/idle-front.png"
                 }
                 alt={arenaData.heroName}
                 style={{
