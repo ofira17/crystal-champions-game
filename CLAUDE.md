@@ -10,20 +10,21 @@ Enemy damage feedback should shrink from full size to 50% while HP > 0, and only
 
 ## Battle Movement Rule
 
-All battle movement happens inside the arena only. Before each question, Miti and the enemy move quickly for ~1 second into battle positions, then the question appears. During this staging period (~1050ms), the contact trigger is blocked so the question cannot open early. Miti walks in from the left edge (x≈2→30), enemy charges in from the right edge at 2.5× normal speed. After staging ends, normal AI and player control resume.
+All battle movement happens inside the arena only. Before each question, Miti and the enemy move quickly for ~1 second into battle positions, then the question appears. During this staging period (~1050ms), the contact trigger is blocked so the question cannot open early. Miti walks in from the left edge (x≈11→35), enemy charges in from the right edge at 2.5× normal speed. After staging ends, normal AI and player control resume.
 
 **Arena staging rules (DO NOT break these):**
-- Miti and enemy must ALWAYS stay inside the arena — never start outside the visible bounds
+- Miti and enemy must ALWAYS stay FULLY inside the arena — never start outside or clipped
+- x=11 is the leftmost valid start position (sprite half-width 63px keeps it inside at all screen sizes)
 - At battle start, both move quickly inside the arena for ~1 second (staging window = 1050ms)
-- Miti starts at x=2 (left edge, partially clipped) and walks to x=30 at MOVE_SPEED×1.3 (~0.65s of visible movement)
-- Enemy starts at x=82–94 (right edge) and charges in at 2.5× normal speed
+- Miti starts at x=11 (left edge, inside) and walks to x=35 at MOVE_SPEED×1.3 (~0.54s of visible movement)
+- Enemy starts at x=82–94 (right edge, inside) and charges in at 2.5× normal speed
 - Question panel appears ONLY after staging ends (both characters in position)
 - Miti should visibly walk in — not barely slide
 
 Arena: `app/child/arena/page.tsx`
 
 **Character positioning:**
-- Hero (Miti) starts at x=30 (battle position, left side of arena), y=60; enters from x=2
+- Hero (Miti) starts at x=35 (battle position, left side of arena), y=60; enters from x=11
 - Goblin enemy spawns at x=82–94 (right side)
 - Hero always uses left/right profile sprites — never `attack-front.png` or `attack-back.png`
 - Hero idle and attack sprites are chosen based on enemy.x vs hero.x (left = `idle-left` / `attack-left`, right = `idle-right` / `attack-right`)

@@ -1123,17 +1123,17 @@ function ArenaPageContent() {
   // Contact-throttle so contact doesn't re-trigger during shooting/feedback
   const lastContactRef = useRef(0);
 
-  const [heroPos,         setHeroPos]         = useState({ x: 2, y: 60 });
+  const [heroPos,         setHeroPos]         = useState({ x: 11, y: 60 });
   const [isHeroMoving,    setIsHeroMoving]    = useState(false);
   const [heroFacingLeft,  setHeroFacingLeft]  = useState(false);
   const [isAttacking,     setIsAttacking]     = useState(false);
   const [runFrame,        setRunFrame]        = useState(0); // 0 = run-right.png, 1 = run-right2.png
   const attackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const heroPosRef        = useRef({ x: 2, y: 60 });
+  const heroPosRef        = useRef({ x: 11, y: 60 });
   // Staging: first ~1s of each battle — hero auto-walks to position, contact blocked
   const stagingRef        = useRef(true);
   const [isStagingActive, setIsStagingActive] = useState(true);
-  const HERO_BATTLE_X     = 30;
+  const HERO_BATTLE_X     = 35;
   const HERO_BATTLE_Y     = 60;
   const isHeroMovingRef   = useRef(false);
   const heroFacingLeftRef = useRef(false);
@@ -1233,9 +1233,9 @@ function ArenaPageContent() {
       lastContactRef.current = 0;
       // Staging: hero walks in from left edge, contact blocked for ~1s
       stagingRef.current = true;
-      heroPosRef.current = { x: 2, y: HERO_BATTLE_Y };
-      heroPosForAiRef.current = { x: 2, y: HERO_BATTLE_Y };
-      setHeroPos({ x: 2, y: HERO_BATTLE_Y });
+      heroPosRef.current = { x: 11, y: HERO_BATTLE_Y };
+      heroPosForAiRef.current = { x: 11, y: HERO_BATTLE_Y };
+      setHeroPos({ x: 11, y: HERO_BATTLE_Y });
       setHeroFacingLeft(false);
       heroFacingLeftRef.current = false;
       setIsStagingActive(true);
