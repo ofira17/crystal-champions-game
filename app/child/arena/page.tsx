@@ -2548,6 +2548,7 @@ function ArenaPageContent() {
               showName={false}
               facingDeg={enemyStateRef.current.facingDeg}
               animPhase={enemyStateRef.current.animPhase}
+              locked={phase === "battle" || phase === "challenge"}
             />
           </div>
         </div>
@@ -2631,6 +2632,38 @@ function ArenaPageContent() {
             🛡️
           </div>
         )}
+
+        {/* ── Targeting beam: Miti center → locked enemy center ── */}
+        {(phase === "battle" || phase === "challenge") && arenaData && (() => {
+          const aw = arenaRef.current?.offsetWidth  ?? 700;
+          const ah = arenaRef.current?.offsetHeight ?? 400;
+          // Hero center: x% exact, y% = top of hero div + ~95px (half sprite height)
+          const hx = (heroPos.x / 100) * aw;
+          const hy = (heroPos.y / 100) * ah + 95;
+          // Enemy center: AI drives x/y in arena % coords
+          const ex = (enemyStateRef.current.x / 100) * aw;
+          const ey = (enemyStateRef.current.y / 100) * ah;
+          const gradId = "aim-beam-grad";
+          return (
+            <svg
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 6, overflow: "visible" }}
+            >
+              <defs>
+                <linearGradient id={gradId} gradientUnits="userSpaceOnUse" x1={hx} y1={hy} x2={ex} y2={ey}>
+                  <stop offset="0%"   stopColor="#22d3ee" stopOpacity="0.05" />
+                  <stop offset="25%"  stopColor="#22d3ee" stopOpacity="0.55" />
+                  <stop offset="100%" stopColor="#f472b6" stopOpacity="0.80" />
+                </linearGradient>
+              </defs>
+              {/* Glow halo behind beam */}
+              <line x1={hx} y1={hy} x2={ex} y2={ey} stroke="rgba(34,211,238,0.15)" strokeWidth="8" strokeLinecap="round" />
+              {/* Dashed beam */}
+              <line x1={hx} y1={hy} x2={ex} y2={ey} stroke={`url(#${gradId})`} strokeWidth="2" strokeDasharray="10 6" strokeLinecap="round" />
+              {/* Bright center core */}
+              <line x1={hx} y1={hy} x2={ex} y2={ey} stroke="rgba(255,255,255,0.22)" strokeWidth="1" strokeDasharray="10 6" strokeLinecap="round" />
+            </svg>
+          );
+        })()}
 
         {/* ── Hero (bottom of arena) — position driven by heroPos state for movement ── */}
         {arenaData && (

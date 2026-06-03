@@ -58,6 +58,7 @@ export interface CrystalEnemyProps {
   facingDeg?:  number;
   animPhase?:  number;
   attacking?:  boolean;
+  locked?:     boolean;
 }
 
 export function CrystalEnemy({
@@ -70,6 +71,7 @@ export function CrystalEnemy({
   facingDeg = 180,
   animPhase = 0,
   attacking = false,
+  locked    = false,
 }: CrystalEnemyProps) {
   const v    = variant ?? worldToVariant(worldId);
   const meta = VARIANT_META[v];
@@ -91,6 +93,18 @@ export function CrystalEnemy({
 
   return (
     <div className="flex flex-col items-center gap-1 select-none">
+      {locked && (
+        <style>{`
+          @keyframes target-lock-ring {
+            0%,100% { opacity: 0.75; transform: scale(1);    }
+            50%      { opacity: 1;    transform: scale(1.08); }
+          }
+          @keyframes target-lock-spin {
+            from { transform: rotate(0deg);   }
+            to   { transform: rotate(360deg); }
+          }
+        `}</style>
+      )}
       <div
         className={damaged ? "enemy-crystal-hit" : ""}
         style={{
@@ -104,6 +118,29 @@ export function CrystalEnemy({
           willChange: "filter",
         }}
       >
+        {locked && (
+          <>
+            {/* Pulsing lock ring */}
+            <div style={{
+              position: "absolute",
+              inset: -16,
+              borderRadius: "50%",
+              border: "2.5px solid rgba(34,211,238,0.85)",
+              boxShadow: "0 0 14px rgba(34,211,238,0.6), inset 0 0 8px rgba(34,211,238,0.15)",
+              animation: "target-lock-ring 1.1s ease-in-out infinite",
+              pointerEvents: "none",
+            }} />
+            {/* Outer rotating dashes */}
+            <div style={{
+              position: "absolute",
+              inset: -28,
+              borderRadius: "50%",
+              border: "1.5px dashed rgba(244,114,182,0.6)",
+              animation: "target-lock-spin 3s linear infinite",
+              pointerEvents: "none",
+            }} />
+          </>
+        )}
         <img
           src={src}
           alt={meta.nameHe}
