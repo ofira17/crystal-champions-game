@@ -2549,7 +2549,7 @@ function ArenaPageContent() {
           >
             {/* HP bar above the enemy (never rotates) */}
             <div style={{
-              width: Math.min(140, getEnemyMeta(enemyVariant).size + 30),
+              width: Math.min(240, getEnemyMeta(enemyVariant).size + 30),
               background: "rgba(0,0,0,0.45)",
               borderRadius: 8,
               padding: "3px 7px",
