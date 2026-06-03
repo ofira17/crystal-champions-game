@@ -53,6 +53,22 @@ Arena: `app/child/arena/page.tsx`
 - Visual issues must be verified in the **real production arena** at https://crystal-champions-game.vercel.app/child/arena, not only by reading code.
 - **All child profiles must be tested, not only child 1.** Arena entry must work for child 2+ when they have an available challenge. The arena button must be enabled for any child in `hero_training` or `world_mysteries` mode, even if no `child_missions` row exists for them.
 
+## Math Grade-Level Rules (Israeli MoE Curriculum — Source of Truth)
+
+Canonical definition lives in `lib/math-grade-rules.ts`. Summary:
+
+| כיתה | פעולות מותרות | טווח מספרים | אסור |
+|------|--------------|-------------|------|
+| 1 | חיבור, חיסור | עד 20; עשרות עד 100 | כפל, חילוק, שברים, אחוזים, עשרוניות |
+| 2 | חיבור/חיסור עד 100, כפל ב-2/5/10 | עד 1000 (קריאה/כתיבה), חישוב עד 100 | חילוק, שברים, אחוזים |
+| 3 | ארבע פעולות, שברים פשוטים ½ ¼ ⅓ | עד 10,000 | אחוזים, עשרוניות, אלגברה |
+| 4 | ארבע פעולות, שברים (מכנה שווה), שטח/היקף מלבן | עד מיליון | אחוזים, עשרוניות, שברים מכנה שונה |
+| 5 | שברים מכנים שונים, עשרוניות, אחוזים פשוטים, שטח משולש | מספרים עשרוניים | אלגברה, נפח, מספרים שליליים |
+| 6 | כל פעולות השברים, אחוזים, יחס, אלגברה ראשונית, נפח תיבה | כולל מספרים שליליים (-20 עד 0) | משוואות ממעלה שניה, טריגונומטריה |
+
+- AI prompt מחיל את הכללים באמצעות `buildMathGradeInstruction(grade)`
+- Validation לאחר קבלת תשובה מה-AI דרך `validateMathQuestion(text, grade)` — שאלה שנכשלת נדחית
+
 ## Battle Visual Requirements
 
 - Miti and the enemy must **face each other** like a real battle (Miti on the left facing right, enemy on the right facing left).
