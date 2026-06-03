@@ -37,6 +37,9 @@ Production deploys **only** from the `canonical` remote (`ofira17/crystal-champi
 Pushing only to `origin` (`ofira17/crystal-champions`) will **NOT** update Vercel.
 Always run `git push canonical main` (in addition to `git push origin main`) to deploy.
 
+**A commit is not considered live until production bundles contain the changed class/function — not only because GitHub HEAD changed.**
+Vercel may cache a prior build or be mid-deploy. To confirm a change is live, fetch the production bundle and grep for the new symbol. If it's an inline `<style>` in a route component (not a global CSS file), it lives in the route's lazy-loaded JS chunk, not in the global CSS bundle — verify the JS chunk, not the CSS file.
+
 # Crystal Champions — Source-of-Truth Rules
 
 ## Project Identity
