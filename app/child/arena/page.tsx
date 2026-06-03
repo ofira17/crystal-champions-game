@@ -1227,29 +1227,29 @@ function ArenaPageContent() {
       // Reset contact throttle so the first contact of every new enemy fires immediately
       lastContactRef.current = 0;
       const v = enemyVariantRef.current;
-      // Pick an entry point OUTSIDE the arena, per archetype
-      let x = 50, y = -8;
+      // Pick an entry point at the arena edge (not outside) so the sprite is never clipped
+      let x = 50, y = 8;
       if (v === "goblin") {
-        // ground-bound: enters running from left or right edge, on the floor
+        // ground-bound: enters from left or right edge at floor level
         const fromLeft = Math.random() < 0.5;
-        x = fromLeft ? -10 : 110;
-        y = 70 + Math.random() * 14; // ground level
+        x = fromLeft ? 6 : 94;
+        y = 70 + Math.random() * 14;
       } else if (v === "bat") {
-        // aerial: enters from top corners
-        x = Math.random() < 0.5 ? -8 : 108;
-        y = -10 + Math.random() * 12;
+        // aerial: enters from top-left or top-right corner
+        x = Math.random() < 0.5 ? 6 : 94;
+        y = 8 + Math.random() * 10;
       } else if (v === "giant") {
-        // stomps in from left or right side, mid-height
+        // stomps in from left or right edge, mid-height
         const fromLeft = Math.random() < 0.5;
-        x = fromLeft ? -14 : 114;
-        y = 40 + Math.random() * 30;
+        x = fromLeft ? 8 : 92;
+        y = 40 + Math.random() * 25;
       } else {
-        // wizard appears at a random outside edge then teleports inward
+        // wizard appears at a random edge inside bounds
         const edge = Math.floor(Math.random() * 4);
-        if (edge === 0)      { x = -10;  y = 20 + Math.random() * 50; }
-        else if (edge === 1) { x = 110;  y = 20 + Math.random() * 50; }
-        else if (edge === 2) { x = 20 + Math.random() * 60; y = -10; }
-        else                 { x = 20 + Math.random() * 60; y = 100; }
+        if (edge === 0)      { x = 6;   y = 20 + Math.random() * 50; }
+        else if (edge === 1) { x = 94;  y = 20 + Math.random() * 50; }
+        else if (edge === 2) { x = 20 + Math.random() * 60; y = 8;   }
+        else                 { x = 20 + Math.random() * 60; y = 88;  }
       }
       enemyStateRef.current.x = x;
       enemyStateRef.current.y = y;
@@ -1406,7 +1406,7 @@ function ArenaPageContent() {
       if (age > 1.0) {
         const aw2 = arenaRef.current?.offsetWidth  ?? 700;
         const ah2 = arenaRef.current?.offsetHeight ?? 400;
-        const eSz = v === "giant" ? 220 : v === "wizard" ? 180 : v === "bat" ? 170 : 160;
+        const eSz = v === "giant" ? 150 : v === "wizard" ? 130 : v === "bat" ? 120 : 110;
         const exMin = Math.round((eSz / 2 / aw2) * 100) + 2;
         const exMax = 100 - exMin;
         const eyMin = Math.round((eSz / 2 / ah2) * 100) + 2;
@@ -2364,7 +2364,7 @@ function ArenaPageContent() {
       {/* ── Top-down arcade arena map ── */}
       <section
         ref={arenaRef}
-        className={`flex-1 relative overflow-hidden mx-3 mb-3 rounded-3xl${arenaShake ? " arena-strong-shake" : ""}`}
+        className={`flex-1 relative mx-3 mb-3 rounded-3xl${arenaShake ? " arena-strong-shake" : ""}`}
         style={{
           backgroundImage: "url('/arena_blue.png')",
           backgroundSize: "cover",

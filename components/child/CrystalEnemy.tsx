@@ -9,10 +9,10 @@ export const ENEMY_VARIANTS: EnemyVariant[] = ["goblin", "bat", "giant", "wizard
 type DirKey = 1 | 2 | 3 | 4 | 5;
 
 const VARIANT_META: Record<EnemyVariant, { nameHe: string; glow: string; size: number; slug: string }> = {
-  goblin: { nameHe: "גובלין השאלות",  glow: "rgba(74, 222, 128, 0.75)",  size: 160, slug: "question-goblin" },
-  bat:    { nameHe: "עטלף הטעויות",   glow: "rgba(167, 139, 250, 0.80)", size: 170, slug: "mistake-bat" },
-  giant:  { nameHe: "ענק הזיכרון",     glow: "rgba(251, 113,  30, 0.90)", size: 220, slug: "memory-giant" },
-  wizard: { nameHe: "קוסם הבלבול",     glow: "rgba(168, 85, 247, 0.85)",  size: 180, slug: "confusion-wizard" },
+  goblin: { nameHe: "גובלין השאלות",  glow: "rgba(74, 222, 128, 0.75)",  size: 110, slug: "question-goblin" },
+  bat:    { nameHe: "עטלף הטעויות",   glow: "rgba(167, 139, 250, 0.80)", size: 120, slug: "mistake-bat" },
+  giant:  { nameHe: "ענק הזיכרון",     glow: "rgba(251, 113,  30, 0.90)", size: 150, slug: "memory-giant" },
+  wizard: { nameHe: "קוסם הבלבול",     glow: "rgba(168, 85, 247, 0.85)",  size: 130, slug: "confusion-wizard" },
 };
 
 function worldToVariant(worldId: string | null): EnemyVariant {
@@ -71,11 +71,10 @@ export function CrystalEnemy({
   const meta = VARIANT_META[v];
   const px   = size ?? meta.size;
 
-  const isIdle = !attacking && animPhase < 0.3;
+  // Always use directional sprite so the enemy faces toward the hero correctly.
+  // idle.png is always front-facing and ignores direction — never use it during battle.
   const dir: DirKey = attacking ? 5 : dirFromFacing(facingDeg);
-  const src = isIdle
-    ? `/enemies/${meta.slug}-idle.png`
-    : `/enemies/${meta.slug}-${dir}.png`;
+  const src = `/enemies/${meta.slug}-${dir}.png`;
 
   const lowHp = hp <= 30;
   const dropShadow = damaged
