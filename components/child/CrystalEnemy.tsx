@@ -97,6 +97,10 @@ export function CrystalEnemy({
 
   const bob = Math.sin(animPhase * Math.PI * 2) * 4;
 
+  // Scale enemy from 100% at full HP down to 50% at 0 HP.
+  // Wrapped in an outer div so the hit-shake CSS animation on the inner div doesn't conflict.
+  const hpScale = 0.5 + (Math.max(0, Math.min(100, hp)) / 100) * 0.5;
+
   return (
     <div className="flex flex-col items-center gap-1 select-none">
       {locked && (
@@ -111,6 +115,12 @@ export function CrystalEnemy({
           }
         `}</style>
       )}
+      {/* Outer wrapper: HP-driven scale (100%→50%). Independent of hit-shake. */}
+      <div style={{
+        transform: `scale(${hpScale})`,
+        transition: "transform 0.4s ease",
+        transformOrigin: "center bottom",
+      }}>
       <div
         className={damaged ? "enemy-crystal-hit" : ""}
         style={{
@@ -118,8 +128,8 @@ export function CrystalEnemy({
           height: px,
           position: "relative",
           filter: dropShadow,
-          opacity: Math.max(0.15, hp / 100),
-          transition: "filter 0.2s ease, opacity 0.4s ease",
+          opacity: 1,
+          transition: "filter 0.2s ease",
           transformOrigin: "center center",
           willChange: "filter",
         }}
@@ -163,6 +173,7 @@ export function CrystalEnemy({
           }}
         />
       </div>
+      </div>{/* end HP-scale outer wrapper */}
 
       {showName && (
         <span

@@ -1,5 +1,13 @@
 @AGENTS.md
 
+## Enemy Damage Visual Rule
+
+Enemy damage feedback should shrink from full size to 50% while HP > 0, and only disappear/dissolve on the final hit.
+- `opacity` must stay at 1 throughout battle — never fade the enemy based on HP
+- Scale formula: `scale = 0.5 + (hp / 100) * 0.5` (100% HP = scale 1.0, 0% HP = scale 0.5)
+- Final defeat: `enemy-defeat-seq` CSS class plays crystal-dissolve animation in `victory-anim` phase only
+- Hit reaction (flash + shake): keep `enemy-crystal-hit` class, applies to inner div only
+
 ## Battle Staging Rule
 
 Arena: `app/child/arena/page.tsx`
