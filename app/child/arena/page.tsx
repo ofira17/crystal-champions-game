@@ -1428,7 +1428,7 @@ function ArenaPageContent() {
         const eSz = v === "giant" ? 340 : v === "wizard" ? 300 : v === "bat" ? 280 : 260;
         const exMin = Math.round((eSz / 2 / aw2) * 100) + 2;
         const exMax = 100 - exMin;
-        const eyMin = Math.max(50, Math.round((eSz / 2 / ah2) * 100) + 2);
+        const eyMin = Math.max(45, Math.round((eSz / 2 / ah2) * 100) + 2);
         const eyMax = Math.min(85, 100 - Math.round((eSz / 2 / ah2) * 100) - 2);
         if (s.x < exMin) { s.x = exMin; s.vx =  Math.abs(s.vx) * 0.6; }
         if (s.x > exMax) { s.x = exMax; s.vx = -Math.abs(s.vx) * 0.6; }
@@ -2551,7 +2551,8 @@ function ArenaPageContent() {
           >
             {/* HP bar above the enemy (never rotates) */}
             <div style={{
-              width: Math.min(240, getEnemyMeta(enemyVariant).size + 30),
+              width: Math.min(240, Math.round(120 + (getEnemyMeta(enemyVariant).size - 120) * (bossHp / 100)) + 30),
+              transition: "width 0.35s ease-out",
               background: "rgba(0,0,0,0.45)",
               borderRadius: 8,
               padding: "3px 7px",

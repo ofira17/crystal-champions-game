@@ -97,21 +97,14 @@ export function CrystalEnemy({
 
   const bob = Math.sin(animPhase * Math.PI * 2) * 4;
 
-  // Scale enemy from 1.8x at full HP down to 1.0x at 0 HP (current "normal" size).
-  // 100% HP = very large (1.8×), each hit shrinks; final hit lands at baseline size then dissolves.
-  // Wrapped in an outer div so the hit-shake CSS animation on the inner div doesn't conflict.
-  const hpScale = 1.0 + (Math.max(0, Math.min(100, hp)) / 100) * 0.8;
+  // Size shrinks with HP: at 100 HP → base px (large); at 0 HP → SMALL_PX (old tiny size).
+  // Direct width/height (no CSS scale) so overflow:hidden on the arena never clips the sprite.
+  const SMALL_PX = 120;
+  const clampedHp = Math.max(0, Math.min(100, hp));
+  const visualPx = Math.round(SMALL_PX + (px - SMALL_PX) * (clampedHp / 100));
 
   return (
-    <div
-      className="flex flex-col items-center gap-1 select-none"
-      style={{
-        transform: `scale(${hpScale})`,
-        transition: "transform 0.4s ease",
-        transformOrigin: "center bottom",
-        willChange: "transform",
-      }}
-    >
+    <div className="flex flex-col items-center gap-1 select-none">
       {locked && (
         <style>{`
           @keyframes target-lock-ring {
@@ -127,14 +120,13 @@ export function CrystalEnemy({
       <div
         className={damaged ? "enemy-crystal-hit" : ""}
         style={{
-          width: px,
-          height: px,
+          width: visualPx,
+          height: visualPx,
           position: "relative",
           filter: dropShadow,
           opacity: 1,
-          transition: "filter 0.2s ease",
-          transformOrigin: "center center",
-          willChange: "filter",
+          transition: "filter 0.2s ease, width 0.35s ease-out, height 0.35s ease-out",
+          willChange: "filter, width, height",
         }}
       >
         {locked && (

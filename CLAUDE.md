@@ -1,18 +1,15 @@
 @AGENTS.md
 
-## Enemy Damage Visual Rule
+## Enemy Damage Visual Rule (CANONICAL — DO NOT revert)
 
-Enemy starts VERY LARGE and shrinks with each hit, reaching baseline size only on the final hit, then dissolves.
+Enemy starts VERY LARGE and shrinks with each hit, reaching small size only on the final hit, then dissolves.
 - `opacity` must stay at 1 throughout battle — never fade the enemy based on HP
-- Scale formula: `scale = 1.0 + (hp / 100) * 0.8` (100% HP = scale 1.8×, 0% HP = scale 1.0×)
-  - 100% HP = 1.8× (very large)
-  - 75% HP ≈ 1.6×
-  - 50% HP ≈ 1.4×
-  - 25% HP ≈ 1.2×
-  - 0% HP = 1.0× (current baseline size), then crystal-dissolve
-- Final defeat: `enemy-defeat-seq` CSS class plays crystal-dissolve animation in `victory-anim` phase only
-- Hit reaction (flash + shake): keep `enemy-crystal-hit` class, applies to inner div only
-- **Transform placement rule**: apply `scale(hpScale)` on the CrystalEnemy **root div** (outermost), NOT on a nested wrapper div. A nested scale wrapper is unreliable inside a flex column — the scale must be at the component root so it cannot be overridden by child transforms or flex layout constraints.
+- **NEVER use CSS `transform: scale()` for HP-based sizing** — `overflow: hidden` on the arena clips scaled content that extends above/below the arena bounds, making the enemy appear tiny (only feet visible). Instead, drive size via `width`/`height` directly on the inner div.
+- Size formula in `CrystalEnemy.tsx`: `visualPx = 120 + (px - 120) * (hp / 100)`
+  - At 100% HP → `px` (the large base size: 260–340 px depending on variant)
+  - At 0% HP → 120 px (old tiny "small" size), then defeat animation
+- Transition: `width 0.35s ease-out, height 0.35s ease-out` — each hit visibly shrinks
+- Hit reaction (flash + shake): `enemy-crystal-hit` class on inner div (unchanged)
 
 ## Enemy Base Size (DO NOT reduce)
 
