@@ -97,9 +97,10 @@ export function CrystalEnemy({
 
   const bob = Math.sin(animPhase * Math.PI * 2) * 4;
 
-  // Scale enemy from 100% at full HP down to 50% at 0 HP.
+  // Scale enemy from 1.8x at full HP down to 1.0x at 0 HP (current "normal" size).
+  // 100% HP = very large (1.8×), each hit shrinks; final hit lands at baseline size then dissolves.
   // Wrapped in an outer div so the hit-shake CSS animation on the inner div doesn't conflict.
-  const hpScale = 0.5 + (Math.max(0, Math.min(100, hp)) / 100) * 0.5;
+  const hpScale = 1.0 + (Math.max(0, Math.min(100, hp)) / 100) * 0.8;
 
   return (
     <div className="flex flex-col items-center gap-1 select-none">

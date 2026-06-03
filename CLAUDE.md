@@ -2,9 +2,14 @@
 
 ## Enemy Damage Visual Rule
 
-Enemy damage feedback should shrink from full size to 50% while HP > 0, and only disappear/dissolve on the final hit.
+Enemy starts VERY LARGE and shrinks with each hit, reaching baseline size only on the final hit, then dissolves.
 - `opacity` must stay at 1 throughout battle — never fade the enemy based on HP
-- Scale formula: `scale = 0.5 + (hp / 100) * 0.5` (100% HP = scale 1.0, 0% HP = scale 0.5)
+- Scale formula: `scale = 1.0 + (hp / 100) * 0.8` (100% HP = scale 1.8×, 0% HP = scale 1.0×)
+  - 100% HP = 1.8× (very large)
+  - 75% HP ≈ 1.6×
+  - 50% HP ≈ 1.4×
+  - 25% HP ≈ 1.2×
+  - 0% HP = 1.0× (current baseline size), then crystal-dissolve
 - Final defeat: `enemy-defeat-seq` CSS class plays crystal-dissolve animation in `victory-anim` phase only
 - Hit reaction (flash + shake): keep `enemy-crystal-hit` class, applies to inner div only
 
