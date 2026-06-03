@@ -14,6 +14,19 @@ Enemy starts VERY LARGE and shrinks with each hit, reaching baseline size only o
 - Hit reaction (flash + shake): keep `enemy-crystal-hit` class, applies to inner div only
 - **Transform placement rule**: apply `scale(hpScale)` on the CrystalEnemy **root div** (outermost), NOT on a nested wrapper div. A nested scale wrapper is unreliable inside a flex column — the scale must be at the component root so it cannot be overridden by child transforms or flex layout constraints.
 
+## Enemy Base Size (DO NOT reduce)
+
+The enemy images are 1254×1254px canvases where the actual character sprite occupies only 65-78% of the canvas area (the rest is transparent padding). Additionally, `rotateY(40deg)` foreshortens apparent width by ~23%. This means at a 150px container the visible character is only ~70-120px — tiny on a large arena.
+
+**Required base sizes in `VARIANT_META` (components/child/CrystalEnemy.tsx):**
+- goblin: 260px
+- bat: 280px
+- giant: 340px
+- wizard: 300px
+
+At 100% HP (scale 1.8×) these produce 468-612px visual enemies — commanding arena presence.
+Do NOT reduce these below the values above or the enemy will look tiny again.
+
 ## Miti Size Rule
 
 Miti must keep normal full size during arena staging and battle walking. Only the enemy uses HP-based shrinking.
