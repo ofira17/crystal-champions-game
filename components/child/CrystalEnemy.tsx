@@ -119,20 +119,21 @@ export function CrystalEnemy({
             {/* Pulsing lock ring */}
             <div style={{
               position: "absolute",
-              inset: -16,
+              inset: -14,
               borderRadius: "50%",
-              border: "2.5px solid rgba(34,211,238,0.85)",
-              boxShadow: "0 0 14px rgba(34,211,238,0.6), inset 0 0 8px rgba(34,211,238,0.15)",
+              border: "2px solid rgba(255,220,80,0.75)",
+              boxShadow: "0 0 14px rgba(255,220,80,0.55), inset 0 0 18px rgba(255,220,80,0.18)",
+              background: "rgba(255,220,80,0.04)",
               animation: "target-lock-ring 1.1s ease-in-out infinite",
               pointerEvents: "none",
             }} />
             {/* Outer rotating dashes */}
             <div style={{
               position: "absolute",
-              inset: -28,
+              inset: -26,
               borderRadius: "50%",
-              border: "1.5px dashed rgba(244,114,182,0.6)",
-              animation: "target-lock-spin 3s linear infinite",
+              border: "1px dashed rgba(255,220,80,0.35)",
+              animation: "target-lock-spin 4s linear infinite",
               pointerEvents: "none",
             }} />
           </>
