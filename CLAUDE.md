@@ -29,6 +29,12 @@ Arena: `app/child/arena/page.tsx`
 - Same origin as beam (attack hand, not sprite center)
 - `projectileDriftPx` and `projectileTravelPx` follow exact beam vector to enemy center
 
+## Deployment Rule
+
+Production deploys **only** from the `canonical` remote (`ofira17/crystal-champions-game`).
+Pushing only to `origin` (`ofira17/crystal-champions`) will **NOT** update Vercel.
+Always run `git push canonical main` (in addition to `git push origin main`) to deploy.
+
 # Crystal Champions — Source-of-Truth Rules
 
 ## Project Identity
