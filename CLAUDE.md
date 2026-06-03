@@ -16,7 +16,9 @@ Enemy starts VERY LARGE and shrinks with each hit, reaching baseline size only o
 
 ## Enemy Base Size (DO NOT reduce)
 
-The enemy images are 1254×1254px canvases where the actual character sprite occupies only 65-78% of the canvas area (the rest is transparent padding). Additionally, `rotateY(40deg)` foreshortens apparent width by ~23%. This means at a 150px container the visible character is only ~70-120px — tiny on a large arena.
+**Measured root cause (Playwright, 2026-06-04):** Production was running goblin=110px, bat=120px, giant=150px, wizard=130px — the size-increase commit was pushed to `origin/main` but NOT to `canonical/main` (Vercel deploy remote). At 1.8× HP scale + 65-78% sprite canvas coverage, the visible character was only ~130-180px — genuinely tiny.
+
+**Secondary measured issue:** AI loop bounds used eSz=110-150px (old sizes), letting the enemy roam to y=16% of the arena. At y=16%, with `transformOrigin: center bottom` scale, the visual top extends 252px ABOVE the arena boundary → overflow:hidden clips 252px, leaving only ~216px visible even at the new large sizes. Fix: AI bounds now use actual base sizes (260-340px) and enforce eyMin=50% so enemy stays in the lower half where the center-bottom scale produces 350-400px of visible enemy.
 
 **Required base sizes in `VARIANT_META` (components/child/CrystalEnemy.tsx):**
 - goblin: 260px
@@ -24,8 +26,10 @@ The enemy images are 1254×1254px canvases where the actual character sprite occ
 - giant: 340px
 - wizard: 300px
 
-At 100% HP (scale 1.8×) these produce 468-612px visual enemies — commanding arena presence.
+At 100% HP (scale 1.8×) these produce 468-612px visual rendering; with center-bottom anchor at y≥50% of arena, 350-400px is visible above the overflow:hidden clip line.
 Do NOT reduce these below the values above or the enemy will look tiny again.
+
+**AI bounds rule:** `eSz` in the arena page AI loop MUST match the sprite base sizes (260, 280, 340, 300) and eyMin MUST be clamped to ≥50% so the enemy center stays in the lower half of the arena.
 
 ## Miti Size Rule
 

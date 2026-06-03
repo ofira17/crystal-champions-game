@@ -1423,11 +1423,13 @@ function ArenaPageContent() {
       if (age > 0.2) {
         const aw2 = arenaRef.current?.offsetWidth  ?? 700;
         const ah2 = arenaRef.current?.offsetHeight ?? 400;
-        const eSz = v === "giant" ? 150 : v === "wizard" ? 130 : v === "bat" ? 120 : 110;
+        // Use actual sprite base sizes (260-340px) so bounds account for large sprites.
+        // eyMin=50 keeps enemy in lower half where center-bottom scale stays visible above arena top.
+        const eSz = v === "giant" ? 340 : v === "wizard" ? 300 : v === "bat" ? 280 : 260;
         const exMin = Math.round((eSz / 2 / aw2) * 100) + 2;
         const exMax = 100 - exMin;
-        const eyMin = Math.round((eSz / 2 / ah2) * 100) + 2;
-        const eyMax = 100 - eyMin - 4;
+        const eyMin = Math.max(50, Math.round((eSz / 2 / ah2) * 100) + 2);
+        const eyMax = Math.min(85, 100 - Math.round((eSz / 2 / ah2) * 100) - 2);
         if (s.x < exMin) { s.x = exMin; s.vx =  Math.abs(s.vx) * 0.6; }
         if (s.x > exMax) { s.x = exMax; s.vx = -Math.abs(s.vx) * 0.6; }
         if (s.y < eyMin) { s.y = eyMin; s.vy =  Math.abs(s.vy) * 0.6; }
