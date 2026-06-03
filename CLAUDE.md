@@ -53,9 +53,20 @@ Arena: `app/child/arena/page.tsx`
 - Visual issues must be verified in the **real production arena** at https://crystal-champions-game.vercel.app/child/arena, not only by reading code.
 - **All child profiles must be tested, not only child 1.** Arena entry must work for child 2+ when they have an available challenge. The arena button must be enabled for any child in `hero_training` or `world_mysteries` mode, even if no `child_missions` row exists for them.
 
-## Math Grade-Level Rules (Israeli MoE Curriculum — Source of Truth)
+## Grade-Level Question Rules (Israeli MoE Curriculum — Source of Truth)
 
-Canonical definition lives in `lib/math-grade-rules.ts`. Summary:
+**Central rules file:** `lib/grade-subject-rules.ts` (all subjects, all grades 1-6)
+**Math rules file:** `lib/math-grade-rules.ts` (detailed math-specific validation)
+
+### Style/Level References (do NOT copy text — use only as level guide)
+- **Math:** שבילים, שבילים פלוס, ה.ש.ב.ח.ה
+- **Hebrew:** מפתח הקסם (gr 1-2), בסוד העניינים (gr 3-4), מילה טובה (gr 5-6)
+- **Science:** במבט חדש
+- **English:** ECB / UPB beginner books
+- **Bible:** grade-level Tanach curriculum
+- **Geography/History:** grades 1-3 = מולדת/סביבה קרובה only; real geography/history only from grade 4
+
+### Math Grade Rules
 
 | כיתה | פעולות מותרות | טווח מספרים | אסור |
 |------|--------------|-------------|------|
@@ -66,8 +77,22 @@ Canonical definition lives in `lib/math-grade-rules.ts`. Summary:
 | 5 | שברים מכנים שונים, עשרוניות, אחוזים פשוטים, שטח משולש | מספרים עשרוניים | אלגברה, נפח, מספרים שליליים |
 | 6 | כל פעולות השברים, אחוזים, יחס, אלגברה ראשונית, נפח תיבה | כולל מספרים שליליים (-20 עד 0) | משוואות ממעלה שניה, טריגונומטריה |
 
-- AI prompt מחיל את הכללים באמצעות `buildMathGradeInstruction(grade)`
-- Validation לאחר קבלת תשובה מה-AI דרך `validateMathQuestion(text, grade)` — שאלה שנכשלת נדחית
+### Per-Subject Grade Rules (selected critical constraints)
+
+| מקצוע | כיתה 1 אסור | כיתה 1-2 אסור | כיתה 4+ מותר |
+|-------|------------|--------------|--------------|
+| מדעים | פוטוסינתזה, מערכות גוף, אטומים, כוכבים | מחזור מים מורכב, כוחות | מערכת השמש, אקולוגיה |
+| גיאוגרפיה | יבשות, מדינות, מפות | כל גיאוגרפיה מחוץ לישראל | יבשות, מדינות, מפות |
+| היסטוריה | מלחמות, מהפכות | היסטוריה עולמית | מלחמות עולם, ציונות |
+| עברית | דקדוק, שורשים | בניינים | כל הבניינים |
+| אנגלית | past tense, reading texts | irregular verbs | all tenses |
+
+### Enforcement
+- `buildAllSubjectsInstruction(grade)` — injects per-subject rules into AI prompt
+- `buildMathGradeInstruction(grade)` — injects math rules into AI prompt
+- `validateMathQuestion(text, grade)` — post-generation math validation; rejects violations
+- `validateSubjectQuestion(text, subject, grade)` — post-generation non-math validation; rejects violations
+- All validation is in `lib/auto-questions.ts` → `generateAutoArenaQuestions()`
 
 ## Battle Visual Requirements
 
