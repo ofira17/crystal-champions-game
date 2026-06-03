@@ -908,7 +908,7 @@ function ArenaPageContent() {
   const [minions, setMinions] = useState<Minion[]>([]);
   const minionsRef = useRef<Minion[]>([]);
   const minionIdRef = useRef(1);
-  const heroPosForAiRef = useRef({ x: 50, y: 70 });
+  const heroPosForAiRef = useRef({ x: 50, y: 55 });
 
   // Spawn a minion from outside the arena, heading inward
   // NOTE: Disabled — replaced by the active enemy archetype system below.
@@ -1123,12 +1123,12 @@ function ArenaPageContent() {
   // Contact-throttle so contact doesn't re-trigger during shooting/feedback
   const lastContactRef = useRef(0);
 
-  const [heroPos,         setHeroPos]         = useState({ x: 50, y: 70 });
+  const [heroPos,         setHeroPos]         = useState({ x: 50, y: 55 });
   const [isHeroMoving,    setIsHeroMoving]    = useState(false);
   const [heroFacingLeft,  setHeroFacingLeft]  = useState(false);
   const [isAttacking,     setIsAttacking]     = useState(false);
   const attackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const heroPosRef        = useRef({ x: 50, y: 70 });
+  const heroPosRef        = useRef({ x: 50, y: 55 });
   const isHeroMovingRef   = useRef(false);
   const heroFacingLeftRef = useRef(false);
   const keysRef     = useRef(new Set<string>());
@@ -1482,13 +1482,18 @@ function ArenaPageContent() {
         x += (dx / mag) * MOVE_SPEED;
         y += (dy / mag) * MOVE_SPEED;
         moved = true;
-        // Dynamic bounds: account for hero half-width (61px) relative to arena width
-        const aw = arenaRef.current?.offsetWidth ?? 700;
+        // Dynamic bounds: hero sprite center-x at heroPos.x%, top at heroPos.y%
+        // sprite: ~122px wide (61px half), 190px tall + 22px name label = 212px total
+        const aw = arenaRef.current?.offsetWidth  ?? 700;
         const ah = arenaRef.current?.offsetHeight ?? 400;
-        const hxPct = Math.round((61 / aw) * 100) + 1;
-        const hyPct = Math.round((10 / ah) * 100) + 1;
-        x = Math.max(hxPct, Math.min(100 - hxPct, x));
-        y = Math.max(hyPct + 4, Math.min(100 - hyPct - 4, y));
+        const heroHalfW = 63;   // px — half of sprite width
+        const heroH     = 212;  // px — sprite height + name label
+        const xMinPct = (heroHalfW / aw) * 100 + 0.5;
+        const xMaxPct = 100 - xMinPct;
+        const yMinPct = (6 / ah) * 100;
+        const yMaxPct = Math.max(yMinPct + 10, ((ah - heroH - 6) / ah) * 100);
+        x = Math.max(xMinPct, Math.min(xMaxPct, x));
+        y = Math.max(yMinPct, Math.min(yMaxPct, y));
         heroPosRef.current = { x, y };
         heroPosForAiRef.current = { x, y };
         setHeroPos({ x, y });
@@ -2612,22 +2617,29 @@ function ArenaPageContent() {
               className={`hero-anim-${heroAnim}${!isHeroMoving && !isAttacking && heroAnim === "idle" ? " hero-idle-bob" : ""}`}
               style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}
             >
-              {/* Hero sprite — swaps between idle and run frame; mirrors when facing left */}
+              {/* Hero sprite — Miti the Crystal Champion; direction-aware */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={isHeroMoving ? "/hero_blue_run_clean.png" : "/hero_blue_idle_clean.png"}
+                src={
+                  isAttacking
+                    ? "/sprites/miti/attack-right.png"   // crystal throw; mirrored below for left-facing
+                    : isHeroMoving
+                    ? "/sprites/miti/run-right2.png"      // run; mirrored below for left-facing
+                    : "/sprites/miti/idle-front.png"      // idle front
+                }
                 alt={arenaData.heroName}
                 style={{
                   height: 190, width: "auto", display: "block",
                   transform: isAttacking
-                    ? `${heroFacingLeft ? "scaleX(-1) " : ""}scale(1.18) translateY(-8px)`
-                    : heroFacingLeft ? "scaleX(-1)" : undefined,
+                    ? `${heroFacingLeft ? "" : "scaleX(-1) "}scale(1.18) translateY(-8px)`
+                    : heroFacingLeft ? "" : "scaleX(-1)",
                   filter: isAttacking
                     ? "drop-shadow(0 0 22px rgba(34,211,238,1)) drop-shadow(0 0 10px white) brightness(1.3)"
                     : phase === "feedback" && feedback?.isCorrect
                       ? "drop-shadow(0 0 20px rgba(34,211,238,0.9)) drop-shadow(0 0 8px white)"
                       : "drop-shadow(0 0 12px rgba(139,92,246,0.7))",
                   transition: isAttacking ? "transform 0.1s ease-out, filter 0.1s ease-out" : "transform 0.15s ease-out, filter 0.3s ease",
+                  imageRendering: "auto",
                 }}
               />
               <span style={{ color: "#c4b5fd", fontSize: 11, fontWeight: 800 }}>
