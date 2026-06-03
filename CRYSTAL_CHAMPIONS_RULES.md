@@ -70,3 +70,10 @@ Before any asset or code work, verify:
 3. Active branch is `main`.
 4. `git pull canonical main` is up to date.
 Never work from the old repo/folder (`miti-heroquest`) or a stale branch.
+
+## 16. Correct project path and arena file — PERMANENT
+- **NEVER** work in `miti-heroquest` or any alternate/old repo.
+- **ALWAYS** verify project path is `C:\Users\97253\Desktop\קלוד\crystal-champions` before changing any code.
+- **ALWAYS** verify the arena file is `app/child/arena/page.tsx` before changing arena code.
+- **NEVER** touch `src/pages/Play.tsx` — that belongs to the old `miti-heroquest` project.
+- Violation of this rule is grounds to stop and re-verify before proceeding.

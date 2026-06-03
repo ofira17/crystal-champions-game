@@ -71,8 +71,11 @@ export function CrystalEnemy({
   const meta = VARIANT_META[v];
   const px   = size ?? meta.size;
 
-  const dir: DirKey = attacking || animPhase > 0.85 ? 5 : dirFromFacing(facingDeg);
-  const src = `/enemies/${meta.slug}-${dir}.png`;
+  const isIdle = !attacking && animPhase < 0.3;
+  const dir: DirKey = attacking ? 5 : dirFromFacing(facingDeg);
+  const src = isIdle
+    ? `/enemies/${meta.slug}-idle.png`
+    : `/enemies/${meta.slug}-${dir}.png`;
 
   const lowHp = hp <= 30;
   const dropShadow = damaged

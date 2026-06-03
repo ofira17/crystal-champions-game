@@ -1300,7 +1300,7 @@ function ArenaPageContent() {
         // hop: small periodic vertical impulse, otherwise settle on ground band
         const hop = Math.sin(age * 7) * 6;
         dvy = (GROUND_Y - s.y) * 4 - Math.max(0, Math.sin(age * 7)) * hop;
-        s.animPhase = (Math.sin(age * 7) + 1) * 0.5;
+        s.animPhase = Math.hypot(s.vx, s.vy) > 2 ? 1 : 0;
       } else if (v === "bat") {
         // Curved flying path — figure-8 style swoop that orbits the hero.
         const SPEED = 24;
@@ -1310,7 +1310,7 @@ function ArenaPageContent() {
         const curl  = Math.cos(age * 1.7);
         dvx = ux * SPEED * approach + tangX * SPEED * 0.9 * swoop + curl * 3;
         dvy = uy * SPEED * approach + tangY * SPEED * 0.9 * swoop - Math.cos(age * 3.2) * 5;
-        s.animPhase = (Math.sin(age * 14) + 1) * 0.5;
+        s.animPhase = Math.hypot(s.vx, s.vy) > 2 ? 1 : 0;
       } else if (v === "giant") {
         // Slow stomp from the side. Approach mostly horizontally, never overlap.
         const SPEED = 7;
@@ -1320,7 +1320,7 @@ function ArenaPageContent() {
         // Bias horizontal motion so it stomps from the side
         dvx = Math.sign(dx || 1) * SPEED * kick * approach;
         dvy = uy * SPEED * 0.5 * kick * approach;
-        s.animPhase = (Math.sin(age * 1.8) + 1) * 0.5;
+        s.animPhase = Math.hypot(s.vx, s.vy) > 1.5 ? 1 : 0;
       } else { // wizard
         // Teleport / dash / dodge. Always reappears at a safe distance.
         s.teleportCooldown -= dt;
@@ -2035,6 +2035,11 @@ function ArenaPageContent() {
           50%     { transform: translateY(0px)   rotate(0deg);   }
           75%     { transform: translateY(-2px)  rotate(0.6deg);  }
         }
+        .hero-running-bob { animation: hero-running-bob 0.24s ease-in-out infinite; }
+        @keyframes hero-running-bob {
+          0%,100% { transform: translateY(0px);  }
+          50%     { transform: translateY(-6px); }
+        }
         .hero-anim-dash   { animation: hero-dash-up 130ms ease-out forwards; }
         .hero-anim-recoil { animation: hero-recoil 170ms cubic-bezier(0.34,1.56,0.64,1) forwards; }
         @keyframes hero-dash-up {
@@ -2624,25 +2629,40 @@ function ArenaPageContent() {
             left: `calc(${heroPos.x}% - 61px)`,
           }}>
             <div
-              className={`hero-anim-${heroAnim}${!isHeroMoving && !isAttacking && heroAnim === "idle" ? " hero-idle-bob" : ""}`}
+              className={
+                heroAnim !== "idle"
+                  ? `hero-anim-${heroAnim}`
+                  : (isHeroMoving && phase === "battle")
+                  ? "hero-running-bob"
+                  : (!isAttacking ? "hero-idle-bob" : "")
+              }
               style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}
             >
               {/* Hero sprite — Miti the Crystal Champion; direction-aware */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={
-                  isAttacking
-                    ? "/sprites/miti/attack-right.png"
-                    : isHeroMoving
-                    ? (runFrame === 0 ? "/sprites/miti/run-right.png" : "/sprites/miti/run-right2.png")
-                    : "/sprites/miti/idle-front.png"
-                }
+                src={(() => {
+                  if (isAttacking || phase === "shooting" || phase === "feedback") {
+                    const ex = enemyStateRef.current.x, ey = enemyStateRef.current.y;
+                    const dx = ex - heroPos.x, dy = ey - heroPos.y;
+                    // Dominant vertical axis → back/front sprite; otherwise left/right
+                    if (Math.abs(dy) > Math.abs(dx) * 0.8)
+                      return dy < 0 ? "/sprites/miti/attack-back.png" : "/sprites/miti/attack-front.png";
+                    return dx < 0 ? "/sprites/miti/attack-left.png" : "/sprites/miti/attack-right.png";
+                  }
+                  if (isHeroMoving && phase === "battle")
+                    return runFrame === 0 ? "/sprites/miti/run-right.png" : "/sprites/miti/run-right2.png";
+                  // Idle sprites are directional — face toward enemy, no flip needed
+                  return heroFacingLeft ? "/sprites/miti/idle-left.png" : "/sprites/miti/idle-right.png";
+                })()}
                 alt={arenaData.heroName}
                 style={{
                   height: 190, width: "auto", display: "block",
-                  transform: isAttacking
-                    ? `${heroFacingLeft ? "" : "scaleX(-1) "}scale(1.18) translateY(-8px)`
-                    : heroFacingLeft ? "" : "scaleX(-1)",
+                  // Attack and idle sprites are directional — no flip needed.
+                  // Run uses run-right.png only — flip horizontally when facing left.
+                  transform: (isAttacking || phase === "shooting" || phase === "feedback")
+                    ? "scale(1.18) translateY(-8px)"
+                    : (isHeroMoving && phase === "battle" && heroFacingLeft) ? "scaleX(-1)" : "",
                   filter: isAttacking
                     ? "drop-shadow(0 0 22px rgba(34,211,238,1)) drop-shadow(0 0 10px white) brightness(1.3)"
                     : phase === "feedback" && feedback?.isCorrect
