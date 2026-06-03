@@ -1441,7 +1441,7 @@ function ArenaPageContent() {
       // Contact trigger — no click/Enter needed. handleFireCrystalRef always has
       // fresh isPending/bossDefeated from the latest render, so no stale-closure issue.
       const CONTACT_DIST = v === "wizard" ? KEEP_DIST_CLAMP + 18 : KEEP_DIST_CLAMP + 2;
-      if (phase === "battle" && age > 0.5) {
+      if (phase === "battle" && age > 0.15) {
         if (dist <= CONTACT_DIST && now - lastContactRef.current > 400) {
           lastContactRef.current = now;
           handleFireCrystalRef.current?.();
@@ -2373,6 +2373,7 @@ function ArenaPageContent() {
           border:    "3px solid rgba(120,60,220,0.70)",
           boxShadow: "0 0 50px rgba(80,30,200,0.35), inset 0 0 60px rgba(40,10,120,0.22)",
           minHeight: 400,
+          overflow: "hidden",
         }}
         onClick={() => {
           if (phase === "battle" && !isPending && !bossDefeated) handleFireCrystal();
@@ -2655,8 +2656,9 @@ function ArenaPageContent() {
                   if (isAttacking || phase === "shooting" || phase === "feedback") {
                     const ex = enemyStateRef.current.x, ey = enemyStateRef.current.y;
                     const dx = ex - heroPos.x, dy = ey - heroPos.y;
-                    // Dominant vertical axis → back/front sprite; otherwise left/right
-                    if (Math.abs(dy) > Math.abs(dx) * 0.8)
+                    // Use front/back only when enemy is nearly directly above/below (|dx| < 10).
+                    // Otherwise always use left/right so Miti faces the enemy's actual position.
+                    if (Math.abs(dx) < 10)
                       return dy < 0 ? "/sprites/miti/attack-back.png" : "/sprites/miti/attack-front.png";
                     return dx < 0 ? "/sprites/miti/attack-left.png" : "/sprites/miti/attack-right.png";
                   }

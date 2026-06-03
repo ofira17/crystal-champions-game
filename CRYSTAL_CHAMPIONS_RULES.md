@@ -77,3 +77,10 @@ Never work from the old repo/folder (`miti-heroquest`) or a stale branch.
 - **ALWAYS** verify the arena file is `app/child/arena/page.tsx` before changing arena code.
 - **NEVER** touch `src/pages/Play.tsx` — that belongs to the old `miti-heroquest` project.
 - Violation of this rule is grounds to stop and re-verify before proceeding.
+
+## 17. Wrong-repo safeguard — PERMANENT
+- **NEVER** use `src/pages/Play.tsx`, `src/components/HeroAvatar.tsx`, or `origin/main` for the real arena.
+- The real arena lives **only** in `app/child/arena/page.tsx` on **`canonical/main`**.
+- The real enemy component is `components/child/CrystalEnemy.tsx`.
+- Pushing to `origin` is forbidden. Always push to `canonical`.
+- If you find yourself editing anything under `src/` in the context of arena work, stop immediately and re-verify the project path.

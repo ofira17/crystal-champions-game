@@ -34,14 +34,18 @@ export function getEnemyMeta(variant: EnemyVariant) {
   return { ...m, src: `/enemies/${m.slug}-1.png` };
 }
 
-// facingDeg convention from arena: angle measured from "up" (0 = up, 180 = down,
-// 90 = right, -90/270 = left). Map to (1) front, (2) right, (3) left, (4) back.
+// facingDeg: clockwise bearing from "up" toward the hero (0=up/back, 180=down/front).
+// Sprite convention verified from actual PNGs:
+//   -1.png = front (facing viewer)   -4.png = back (facing away)
+//   -2.png = left-profile            -3.png = right-profile
+// Bearing 90° (hero to enemy's right)  → enemy faces right → -3.png
+// Bearing 270° (hero to enemy's left)  → enemy faces left  → -2.png
 function dirFromFacing(facingDeg: number): DirKey {
-  const a = ((facingDeg % 360) + 360) % 360; // 0..360
-  if (a >= 315 || a < 45) return 4;        // up   → back
-  if (a >= 45  && a < 135) return 2;       // right
-  if (a >= 135 && a < 225) return 1;       // down → front (facing viewer/hero)
-  return 3;                                // left
+  const a = ((facingDeg % 360) + 360) % 360;
+  if (a >= 315 || a < 45)  return 4; // up   → back
+  if (a >= 45  && a < 135) return 3; // right → -3.png (right-profile)
+  if (a >= 135 && a < 225) return 1; // down  → front
+  return 2;                          // left  → -2.png (left-profile)
 }
 
 export interface CrystalEnemyProps {
