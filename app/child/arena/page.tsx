@@ -1257,6 +1257,12 @@ function ArenaPageContent() {
       enemyStateRef.current.vy = 0;
       enemyStateRef.current.spawnedAt = performance.now();
       enemyStateRef.current.teleportCooldown = 1.5;
+      // Face hero immediately — compute angle from spawn point toward hero
+      const _hdx = heroPosRef.current.x - x;
+      const _hdy = heroPosRef.current.y - y;
+      enemyStateRef.current.facingDeg = (Math.atan2(_hdx, -_hdy) * 180) / Math.PI;
+      // Force directional sprite (not idle) from the first frame
+      enemyStateRef.current.animPhase = 1;
     }
   }, [phase, current]);
 
@@ -1560,6 +1566,10 @@ function ArenaPageContent() {
       }
     }
     playSound("shoot");
+    // Snap hero facing toward enemy at moment of contact
+    const _contactFacingLeft = enemyStateRef.current.x < heroPosRef.current.x;
+    heroFacingLeftRef.current = _contactFacingLeft;
+    setHeroFacingLeft(_contactFacingLeft);
     // Open the question immediately on contact — no waiting.
     setIsAttacking(true);
     setPhase("challenge");
