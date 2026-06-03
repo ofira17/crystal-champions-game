@@ -908,7 +908,7 @@ function ArenaPageContent() {
   const [minions, setMinions] = useState<Minion[]>([]);
   const minionsRef = useRef<Minion[]>([]);
   const minionIdRef = useRef(1);
-  const heroPosForAiRef = useRef({ x: 50, y: 55 });
+  const heroPosForAiRef = useRef({ x: 22, y: 60 });
 
   // Spawn a minion from outside the arena, heading inward
   // NOTE: Disabled — replaced by the active enemy archetype system below.
@@ -1123,13 +1123,13 @@ function ArenaPageContent() {
   // Contact-throttle so contact doesn't re-trigger during shooting/feedback
   const lastContactRef = useRef(0);
 
-  const [heroPos,         setHeroPos]         = useState({ x: 50, y: 55 });
+  const [heroPos,         setHeroPos]         = useState({ x: 22, y: 60 });
   const [isHeroMoving,    setIsHeroMoving]    = useState(false);
   const [heroFacingLeft,  setHeroFacingLeft]  = useState(false);
   const [isAttacking,     setIsAttacking]     = useState(false);
   const [runFrame,        setRunFrame]        = useState(0); // 0 = run-right.png, 1 = run-right2.png
   const attackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const heroPosRef        = useRef({ x: 50, y: 55 });
+  const heroPosRef        = useRef({ x: 22, y: 60 });
   const isHeroMovingRef   = useRef(false);
   const heroFacingLeftRef = useRef(false);
   const keysRef     = useRef(new Set<string>());
@@ -1230,10 +1230,9 @@ function ArenaPageContent() {
       // Pick an entry point at the arena edge (not outside) so the sprite is never clipped
       let x = 50, y = 8;
       if (v === "goblin") {
-        // ground-bound: enters from left or right edge at floor level
-        const fromLeft = Math.random() < 0.5;
-        x = fromLeft ? 6 : 94;
-        y = 70 + Math.random() * 14;
+        // ground-bound: always enters from RIGHT so battle staging is Miti-left vs enemy-right
+        x = 82 + Math.random() * 12;
+        y = 65 + Math.random() * 14;
       } else if (v === "bat") {
         // aerial: enters from top-left or top-right corner
         x = Math.random() < 0.5 ? 6 : 94;
@@ -1621,19 +1620,19 @@ function ArenaPageContent() {
         if (arenaRef.current) {
           const aw = arenaRef.current.offsetWidth;
           const ah = arenaRef.current.offsetHeight;
-          // Origin: Miti sprite center — matches SVG beam hero-end exactly
-          const hxPx = (heroPosRef.current.x / 100) * aw;
-          const hyPx = (heroPosRef.current.y / 100) * ah + 95;
-          // Target: locked enemy center — matches SVG beam enemy-end exactly
+          const facingRight = enemyStateRef.current.x >= heroPosRef.current.x;
+          // Origin: Miti's attack hand — right side when facing right, left side when facing left
+          const handOffsetX = facingRight ? 52 : -52;
+          const hxPx = (heroPosRef.current.x / 100) * aw + handOffsetX;
+          const hyPx = (heroPosRef.current.y / 100) * ah + 68; // chest/shoulder height
+          // Target: locked enemy center
           const exPx = (enemyStateRef.current.x / 100) * aw;
           const eyPx = (enemyStateRef.current.y / 100) * ah;
           const dxAbs = exPx - hxPx;
           const dyAbs = eyPx - hyPx;
-          if (Math.abs(dxAbs) > 24) {
-            heroFacingLeftRef.current = dxAbs < 0;
-            setHeroFacingLeft(dxAbs < 0);
-          }
-          // bottom-% origin so projectile is placed at Miti's sprite center
+          heroFacingLeftRef.current = !facingRight;
+          setHeroFacingLeft(!facingRight);
+          // bottom-% origin so projectile is placed at Miti's attack hand
           setProjectileOriginX((hxPx / aw) * 100);
           setProjectileOriginY(((ah - hyPx) / ah) * 100);
           // drift (X) and travel (Y) follow the beam vector exactly
@@ -2642,9 +2641,11 @@ function ArenaPageContent() {
         {(phase === "battle" || phase === "challenge") && arenaData && (() => {
           const aw = arenaRef.current?.offsetWidth  ?? 700;
           const ah = arenaRef.current?.offsetHeight ?? 400;
-          // Hero center: x% exact, y% = top of hero div + ~95px (half sprite height)
-          const hx = (heroPos.x / 100) * aw;
-          const hy = (heroPos.y / 100) * ah + 95;
+          // Hero attack hand: offset right (+52) when facing right, left (-52) when facing left
+          const facingRight = enemyStateRef.current.x >= heroPos.x;
+          const handOffsetX = facingRight ? 52 : -52;
+          const hx = (heroPos.x / 100) * aw + handOffsetX;
+          const hy = (heroPos.y / 100) * ah + 68; // chest/shoulder height
           // Enemy center: AI drives x/y in arena % coords
           const ex = (enemyStateRef.current.x / 100) * aw;
           const ey = (enemyStateRef.current.y / 100) * ah;
@@ -2665,13 +2666,13 @@ function ArenaPageContent() {
                 </filter>
               </defs>
               {/* Outer soft glow halo */}
-              <line x1={hx} y1={hy} x2={ex} y2={ey} stroke="rgba(34,211,238,0.22)" strokeWidth="22" strokeLinecap="round" />
+              <line x1={hx} y1={hy} x2={ex} y2={ey} stroke="rgba(34,211,238,0.28)" strokeWidth="32" strokeLinecap="round" />
               {/* Mid electric-cyan glow */}
-              <line x1={hx} y1={hy} x2={ex} y2={ey} stroke="rgba(103,232,249,0.55)" strokeWidth="10" strokeLinecap="round" />
+              <line x1={hx} y1={hy} x2={ex} y2={ey} stroke="rgba(103,232,249,0.65)" strokeWidth="14" strokeLinecap="round" />
               {/* Main beam — solid, bright */}
-              <line x1={hx} y1={hy} x2={ex} y2={ey} stroke={`url(#${gradId})`} strokeWidth="5" strokeLinecap="round" />
+              <line x1={hx} y1={hy} x2={ex} y2={ey} stroke={`url(#${gradId})`} strokeWidth="7" strokeLinecap="round" />
               {/* Bright white-blue core */}
-              <line x1={hx} y1={hy} x2={ex} y2={ey} stroke="rgba(240,249,255,0.90)" strokeWidth="2" strokeLinecap="round" />
+              <line x1={hx} y1={hy} x2={ex} y2={ey} stroke="rgba(240,249,255,0.95)" strokeWidth="3" strokeLinecap="round" />
             </svg>
           );
         })()}
@@ -2698,13 +2699,9 @@ function ArenaPageContent() {
               <img
                 src={(() => {
                   if (isAttacking || phase === "shooting" || phase === "feedback") {
-                    const ex = enemyStateRef.current.x, ey = enemyStateRef.current.y;
-                    const dx = ex - heroPos.x, dy = ey - heroPos.y;
-                    // Use front/back only when enemy is nearly directly above/below (|dx| < 10).
-                    // Otherwise always use left/right so Miti faces the enemy's actual position.
-                    if (Math.abs(dx) < 10)
-                      return dy < 0 ? "/sprites/miti/attack-back.png" : "/sprites/miti/attack-front.png";
-                    return dx < 0 ? "/sprites/miti/attack-left.png" : "/sprites/miti/attack-right.png";
+                    // Always use side/profile sprites — never front/back (no screen-facing)
+                    const ex = enemyStateRef.current.x;
+                    return ex < heroPos.x ? "/sprites/miti/attack-left.png" : "/sprites/miti/attack-right.png";
                   }
                   if (isHeroMoving && phase === "battle")
                     return runFrame === 0 ? "/sprites/miti/run-right.png" : "/sprites/miti/run-right2.png";
