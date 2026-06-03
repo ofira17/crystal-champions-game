@@ -103,7 +103,15 @@ export function CrystalEnemy({
   const hpScale = 1.0 + (Math.max(0, Math.min(100, hp)) / 100) * 0.8;
 
   return (
-    <div className="flex flex-col items-center gap-1 select-none">
+    <div
+      className="flex flex-col items-center gap-1 select-none"
+      style={{
+        transform: `scale(${hpScale})`,
+        transition: "transform 0.4s ease",
+        transformOrigin: "center bottom",
+        willChange: "transform",
+      }}
+    >
       {locked && (
         <style>{`
           @keyframes target-lock-ring {
@@ -116,12 +124,6 @@ export function CrystalEnemy({
           }
         `}</style>
       )}
-      {/* Outer wrapper: HP-driven scale (100%→50%). Independent of hit-shake. */}
-      <div style={{
-        transform: `scale(${hpScale})`,
-        transition: "transform 0.4s ease",
-        transformOrigin: "center bottom",
-      }}>
       <div
         className={damaged ? "enemy-crystal-hit" : ""}
         style={{
@@ -174,7 +176,6 @@ export function CrystalEnemy({
           }}
         />
       </div>
-      </div>{/* end HP-scale outer wrapper */}
 
       {showName && (
         <span

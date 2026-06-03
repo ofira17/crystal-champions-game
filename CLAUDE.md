@@ -12,6 +12,7 @@ Enemy starts VERY LARGE and shrinks with each hit, reaching baseline size only o
   - 0% HP = 1.0× (current baseline size), then crystal-dissolve
 - Final defeat: `enemy-defeat-seq` CSS class plays crystal-dissolve animation in `victory-anim` phase only
 - Hit reaction (flash + shake): keep `enemy-crystal-hit` class, applies to inner div only
+- **Transform placement rule**: apply `scale(hpScale)` on the CrystalEnemy **root div** (outermost), NOT on a nested wrapper div. A nested scale wrapper is unreliable inside a flex column — the scale must be at the component root so it cannot be overridden by child transforms or flex layout constraints.
 
 ## Miti Size Rule
 
