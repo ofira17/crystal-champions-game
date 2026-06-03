@@ -1223,6 +1223,8 @@ function ArenaPageContent() {
   // Reset enemy entry point when a new battle/question starts
   useEffect(() => {
     if (phase === "battle") {
+      // Reset contact throttle so the first contact of every new enemy fires immediately
+      lastContactRef.current = 0;
       const v = enemyVariantRef.current;
       // Pick an entry point OUTSIDE the arena, per archetype
       let x = 50, y = -8;
@@ -1393,12 +1395,19 @@ function ArenaPageContent() {
         }
       }
 
-      // Soft bounds after spawn-in
+      // Soft bounds after spawn-in — use dynamic margins so enemy center stays inside
       if (age > 1.0) {
-        if (s.x < 4)  { s.x = 4;  s.vx = Math.abs(s.vx) * 0.6; }
-        if (s.x > 96) { s.x = 96; s.vx = -Math.abs(s.vx) * 0.6; }
-        if (s.y < 4)  { s.y = 4;  s.vy = Math.abs(s.vy) * 0.6; }
-        if (s.y > 88) { s.y = 88; s.vy = -Math.abs(s.vy) * 0.6; }
+        const aw2 = arenaRef.current?.offsetWidth  ?? 700;
+        const ah2 = arenaRef.current?.offsetHeight ?? 400;
+        const eSz = v === "giant" ? 220 : v === "wizard" ? 180 : v === "bat" ? 170 : 160;
+        const exMin = Math.round((eSz / 2 / aw2) * 100) + 2;
+        const exMax = 100 - exMin;
+        const eyMin = Math.round((eSz / 2 / ah2) * 100) + 2;
+        const eyMax = 100 - eyMin - 4;
+        if (s.x < exMin) { s.x = exMin; s.vx =  Math.abs(s.vx) * 0.6; }
+        if (s.x > exMax) { s.x = exMax; s.vx = -Math.abs(s.vx) * 0.6; }
+        if (s.y < eyMin) { s.y = eyMin; s.vy =  Math.abs(s.vy) * 0.6; }
+        if (s.y > eyMax) { s.y = eyMax; s.vy = -Math.abs(s.vy) * 0.6; }
       }
 
       // Facing — point toward hero (SVG drawn facing UP → 0°)
@@ -1463,8 +1472,8 @@ function ArenaPageContent() {
       let goingLeft = heroFacingLeftRef.current;
 
       let dx = 0, dy = 0;
-      if (k.has("ArrowLeft")  || k.has("a") || k.has("A") || d.has("left"))  { dx -= 1; goingLeft = true;  }
-      if (k.has("ArrowRight") || k.has("d") || k.has("D") || d.has("right")) { dx += 1; goingLeft = false; }
+      if (k.has("ArrowLeft")  || k.has("a") || k.has("A") || d.has("left"))  { dx -= 1; }
+      if (k.has("ArrowRight") || k.has("d") || k.has("D") || d.has("right")) { dx += 1; }
       if (k.has("ArrowUp")    || k.has("w") || k.has("W") || d.has("up"))    { dy -= 1; }
       if (k.has("ArrowDown")  || k.has("s") || k.has("S") || d.has("down"))  { dy += 1; }
       if (dx !== 0 || dy !== 0) {
@@ -1473,12 +1482,20 @@ function ArenaPageContent() {
         x += (dx / mag) * MOVE_SPEED;
         y += (dy / mag) * MOVE_SPEED;
         moved = true;
-        x = Math.max(HERO_BOUNDS.xMin, Math.min(HERO_BOUNDS.xMax, x));
-        y = Math.max(HERO_BOUNDS.yMin, Math.min(HERO_BOUNDS.yMax, y));
+        // Dynamic bounds: account for hero half-width (61px) relative to arena width
+        const aw = arenaRef.current?.offsetWidth ?? 700;
+        const ah = arenaRef.current?.offsetHeight ?? 400;
+        const hxPct = Math.round((61 / aw) * 100) + 1;
+        const hyPct = Math.round((10 / ah) * 100) + 1;
+        x = Math.max(hxPct, Math.min(100 - hxPct, x));
+        y = Math.max(hyPct + 4, Math.min(100 - hyPct - 4, y));
         heroPosRef.current = { x, y };
         heroPosForAiRef.current = { x, y };
         setHeroPos({ x, y });
       }
+      // Hero always faces toward the enemy during movement and at rest
+      const ex = enemyStateRef.current.x;
+      goingLeft = ex < x;
       // Only call setState when moving/facing state actually changes
       if (moved !== isHeroMovingRef.current) {
         isHeroMovingRef.current = moved;
@@ -2499,7 +2516,7 @@ function ArenaPageContent() {
               damaged={enemyHit === "flash"}
               showName={false}
               facingDeg={enemyStateRef.current.facingDeg}
-              animPhase={enemyStateRef.current.animPhase + enemyTick * 0.001}
+              animPhase={enemyStateRef.current.animPhase}
             />
           </div>
         </div>
