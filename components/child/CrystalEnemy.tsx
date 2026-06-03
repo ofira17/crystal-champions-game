@@ -68,10 +68,9 @@ export function CrystalEnemy({
   const meta = VARIANT_META[v];
   const px   = size ?? meta.size;
 
-  // Always use the side-facing sprite (-1.png). The sprites face LEFT natively.
-  // Orientation rule: if the enemy is to the RIGHT of the hero (enemyX > heroX),
-  // the enemy must face LEFT (toward the hero) → no flip (scaleX 1).
-  // If the enemy is to the LEFT of the hero, flip to face RIGHT → scaleX(-1).
+  // Sprites are front-facing PNGs. We use a 3D perspective rotation to simulate
+  // a side-profile view so the enemy always appears to face toward the hero.
+  // Rule: enemy is always positioned RIGHT of the hero → must face LEFT.
   const src = attacking
     ? `/enemies/${meta.slug}-5.png`
     : `/enemies/${meta.slug}-1.png`;
@@ -82,10 +81,12 @@ export function CrystalEnemy({
       ? enemyX > heroX          // enemy is RIGHT of hero → face LEFT toward hero
       : ((facingDeg % 360) + 360) % 360 > 180; // legacy fallback
 
-  // Sprites face LEFT natively, so:
-  //   shouldFaceLeft=true  → scaleX(1)  (no flip, already faces left)
-  //   shouldFaceLeft=false → scaleX(-1) (flip to face right)
-  const flipX = shouldFaceLeft ? 1 : -1;
+  // Apply a 3D perspective rotation to simulate a side/profile view from the
+  // front-facing sprite. rotateY(-40deg) makes the sprite appear to face left;
+  // rotateY(40deg) makes it appear to face right.
+  const rotateY = shouldFaceLeft ? -40 : 40;
+  // flipX not needed — rotateY already implies the correct facing direction.
+  const flipX = 1;
 
   const lowHp = hp <= 30;
   const dropShadow = damaged
@@ -155,7 +156,7 @@ export function CrystalEnemy({
             width: "100%",
             height: "100%",
             objectFit: "contain",
-            transform: `translateY(${bob}px) scaleX(${flipX})`,
+            transform: `perspective(300px) rotateY(${rotateY}deg) translateY(${bob}px) scaleX(${flipX})`,
             willChange: "transform",
             userSelect: "none",
             pointerEvents: "none",

@@ -9,7 +9,7 @@ Arena: `app/child/arena/page.tsx`
 - Goblin enemy spawns at x=82–94 (right side)
 - Hero always uses left/right profile sprites — never `attack-front.png` or `attack-back.png`
 - Hero idle and attack sprites are chosen based on enemy.x vs hero.x (left = `idle-left` / `attack-left`, right = `idle-right` / `attack-right`)
-- Enemy facing: `enemyX > heroX` → face left (toward hero); sprites face LEFT natively
+- Enemy facing: `enemyX > heroX` → face left (toward hero). Sprites are FRONT-FACING PNGs — a CSS `perspective(300px) rotateY(-40deg)` 3D transform is applied in `CrystalEnemy.tsx` to simulate a side/profile view. Never remove this transform or the enemy will appear front-facing.
 
 **Crystal beam:**
 - SVG beam connects Miti's attack hand → enemy center
