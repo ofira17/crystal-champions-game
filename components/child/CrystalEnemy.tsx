@@ -6,8 +6,6 @@ export type EnemyVariant = "goblin" | "bat" | "giant" | "wizard";
 
 export const ENEMY_VARIANTS: EnemyVariant[] = ["goblin", "bat", "giant", "wizard"];
 
-type DirKey = 1 | 2 | 3 | 4 | 5;
-
 const VARIANT_META: Record<EnemyVariant, { nameHe: string; glow: string; size: number; slug: string }> = {
   goblin: { nameHe: "גובלין השאלות",  glow: "rgba(74, 222, 128, 0.75)",  size: 110, slug: "question-goblin" },
   bat:    { nameHe: "עטלף הטעויות",   glow: "rgba(167, 139, 250, 0.80)", size: 120, slug: "mistake-bat" },
@@ -34,18 +32,14 @@ export function getEnemyMeta(variant: EnemyVariant) {
   return { ...m, src: `/enemies/${m.slug}-1.png` };
 }
 
-// facingDeg: clockwise bearing from "up" toward the hero (0=up/back, 180=down/front).
-// Sprite convention verified from actual PNGs:
-//   -1.png = front (facing viewer)   -4.png = back (facing away)
-//   -2.png = left-profile            -3.png = right-profile
-// Bearing 90° (hero to enemy's right)  → enemy faces right → -3.png
-// Bearing 270° (hero to enemy's left)  → enemy faces left  → -2.png
-function dirFromFacing(facingDeg: number): DirKey {
+// facingDeg: clockwise bearing from "up" toward the hero (0=up, 90=right, 180=down, 270=left).
+// We always render the front-facing sprite (-1.png) and mirror it horizontally when the
+// hero is to the LEFT of the enemy, so the enemy always faces the hero regardless of which
+// side it spawned on. This is more reliable than per-direction PNG files.
+function heroIsToLeft(facingDeg: number): boolean {
   const a = ((facingDeg % 360) + 360) % 360;
-  if (a >= 315 || a < 45)  return 4; // up   → back
-  if (a >= 45  && a < 135) return 3; // right → -3.png (right-profile)
-  if (a >= 135 && a < 225) return 1; // down  → front
-  return 2;                          // left  → -2.png (left-profile)
+  // a > 180 means the bearing passes through the west arc → hero is to the LEFT
+  return a > 180;
 }
 
 export interface CrystalEnemyProps {
@@ -77,10 +71,12 @@ export function CrystalEnemy({
   const meta = VARIANT_META[v];
   const px   = size ?? meta.size;
 
-  // Always use directional sprite so the enemy faces toward the hero correctly.
-  // idle.png is always front-facing and ignores direction — never use it during battle.
-  const dir: DirKey = attacking ? 5 : dirFromFacing(facingDeg);
-  const src = `/enemies/${meta.slug}-${dir}.png`;
+  // Always use the front-facing sprite and mirror it with scaleX so the enemy
+  // reliably faces toward the hero regardless of which side it entered from.
+  const src = attacking
+    ? `/enemies/${meta.slug}-5.png`
+    : `/enemies/${meta.slug}-1.png`;
+  const facingLeft = heroIsToLeft(facingDeg);
 
   const lowHp = hp <= 30;
   const dropShadow = damaged
@@ -149,7 +145,7 @@ export function CrystalEnemy({
             width: "100%",
             height: "100%",
             objectFit: "contain",
-            transform: `translateY(${bob}px)`,
+            transform: `translateY(${bob}px) scaleX(${facingLeft ? -1 : 1})`,
             willChange: "transform",
             userSelect: "none",
             pointerEvents: "none",

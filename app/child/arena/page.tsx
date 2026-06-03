@@ -2583,18 +2583,18 @@ function ArenaPageContent() {
               animation: `proj-up-hit 380ms cubic-bezier(0.1,0,0.4,1) forwards`,
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
-              {/* Diamond — gold + larger on a 3+ streak, purple/cyan otherwise. */}
+              {/* Diamond — gold + larger on a 3+ streak, electric cyan/blue-white otherwise. */}
               <div style={{
-                width:  strongShot ? 30 : 22,
-                height: strongShot ? 30 : 22,
+                width:  strongShot ? 52 : 40,
+                height: strongShot ? 52 : 40,
                 background: strongShot
                   ? "linear-gradient(160deg, #fff7c2 0%, #fde047 35%, #f59e0b 70%, #b45309 100%)"
-                  : "linear-gradient(160deg, white 0%, #e9d5ff 30%, #a78bfa 65%, #6d28d9 100%)",
+                  : "linear-gradient(160deg, #ffffff 0%, #bfefff 25%, #22d3ee 60%, #0891b2 100%)",
                 clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)",
                 boxShadow: strongShot
-                  ? "0 0 22px rgba(253,224,71,1), 0 0 44px rgba(245,158,11,0.85), 0 0 8px white"
-                  : "0 0 14px rgba(167,139,250,0.95), 0 0 28px rgba(139,92,246,0.6), 0 0 6px white",
-                filter: strongShot ? "brightness(1.25)" : undefined,
+                  ? "0 0 28px rgba(253,224,71,1), 0 0 56px rgba(245,158,11,0.9), 0 0 12px white"
+                  : "0 0 20px rgba(34,211,238,1), 0 0 40px rgba(6,182,212,0.9), 0 0 60px rgba(34,211,238,0.5), 0 0 10px white",
+                filter: "brightness(1.3)",
               }} />
             </div>
           </div>
@@ -2654,17 +2654,23 @@ function ArenaPageContent() {
             >
               <defs>
                 <linearGradient id={gradId} gradientUnits="userSpaceOnUse" x1={hx} y1={hy} x2={ex} y2={ey}>
-                  <stop offset="0%"   stopColor="#22d3ee" stopOpacity="0.05" />
-                  <stop offset="25%"  stopColor="#22d3ee" stopOpacity="0.55" />
-                  <stop offset="100%" stopColor="#f472b6" stopOpacity="0.80" />
+                  <stop offset="0%"   stopColor="#22d3ee" stopOpacity="0.55" />
+                  <stop offset="40%"  stopColor="#67e8f9" stopOpacity="1.00" />
+                  <stop offset="100%" stopColor="#f0f9ff" stopOpacity="1.00" />
                 </linearGradient>
+                <filter id="beam-glow-filter" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="4" result="blur" />
+                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
               </defs>
-              {/* Glow halo behind beam */}
-              <line x1={hx} y1={hy} x2={ex} y2={ey} stroke="rgba(34,211,238,0.15)" strokeWidth="8" strokeLinecap="round" />
-              {/* Dashed beam */}
-              <line x1={hx} y1={hy} x2={ex} y2={ey} stroke={`url(#${gradId})`} strokeWidth="2" strokeDasharray="10 6" strokeLinecap="round" />
-              {/* Bright center core */}
-              <line x1={hx} y1={hy} x2={ex} y2={ey} stroke="rgba(255,255,255,0.22)" strokeWidth="1" strokeDasharray="10 6" strokeLinecap="round" />
+              {/* Outer soft glow halo */}
+              <line x1={hx} y1={hy} x2={ex} y2={ey} stroke="rgba(34,211,238,0.22)" strokeWidth="22" strokeLinecap="round" />
+              {/* Mid electric-cyan glow */}
+              <line x1={hx} y1={hy} x2={ex} y2={ey} stroke="rgba(103,232,249,0.55)" strokeWidth="10" strokeLinecap="round" />
+              {/* Main beam — solid, bright */}
+              <line x1={hx} y1={hy} x2={ex} y2={ey} stroke={`url(#${gradId})`} strokeWidth="5" strokeLinecap="round" />
+              {/* Bright white-blue core */}
+              <line x1={hx} y1={hy} x2={ex} y2={ey} stroke="rgba(240,249,255,0.90)" strokeWidth="2" strokeLinecap="round" />
             </svg>
           );
         })()}
@@ -2825,103 +2831,82 @@ function ArenaPageContent() {
         )}
         {/* ירי button hidden — arena tap-to-shoot replaces it; handleFireCrystal logic unchanged */}
 
-        {/* ── Challenge battle bubble ── */}
-        {phase === "challenge" && q && (() => {
-          const arenaWidth = arenaRef.current?.offsetWidth ?? 600;
-          const screenW = typeof window !== "undefined" ? window.innerWidth : 600;
-          const bubbleWidth = screenW >= 768 ? 340 : screenW >= 640 ? 300 : 260;
-          const heroCenter = arenaWidth * heroPos.x / 100;
-          const heroRightEdge = heroCenter + 61;
-          const heroLeftEdge  = heroCenter - 61;
-          const gap   = 16;
-          const inset = 8;
-          const rightFits = heroRightEdge + gap + bubbleWidth <= arenaWidth - inset;
-          let bubbleLeft = rightFits
-            ? heroRightEdge + gap
-            : heroLeftEdge - gap - bubbleWidth;
-          bubbleLeft = Math.max(inset, Math.min(bubbleLeft, arenaWidth - bubbleWidth - inset));
-          const tailLeft = rightFits ? "15%" : "85%";
-          return (
-        <div
-          className="pointer-events-none"
-          style={{
-            position: "absolute",
-            bottom: "28%",
-            left: bubbleLeft,
-            zIndex: 30,
-          }}
-        >
-          <style>{`
-            @keyframes challenge-pop {
-              0%   { transform: scale(0.55) translateY(24px); opacity: 0; }
-              60%  { transform: scale(1.06) translateY(-4px); opacity: 1; }
-              80%  { transform: scale(0.97) translateY(2px);  opacity: 1; }
-              100% { transform: scale(1)   translateY(0px);  opacity: 1; }
-            }
-            .challenge-pop { animation: challenge-pop 0.38s cubic-bezier(0.34,1.56,0.64,1) both; }
-          `}</style>
+        {/* ── Challenge battle panel — anchored to TOP of arena, never covers Miti (bottom) or enemy ── */}
+        {phase === "challenge" && q && (
           <div
-            className="challenge-pop pointer-events-auto relative w-[86vw] max-w-[260px] sm:max-w-[300px] md:max-w-[340px] flex flex-col gap-1 rounded-2xl px-2.5 pt-2 pb-3"
-            dir="rtl"
             style={{
-              background: "linear-gradient(160deg, #1e0a3c 0%, #0f0a2a 100%)",
-              border: "2px solid rgba(139,92,246,0.55)",
-              boxShadow: "0 0 0 1px rgba(34,211,238,0.18), 0 8px 40px rgba(0,0,0,0.7), 0 0 28px rgba(139,92,246,0.35)",
+              position: "absolute",
+              top: "3%",
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 30,
+              width: "min(340px, 88vw)",
+              pointerEvents: "none",
             }}
           >
-            {/* Tail pointing down toward hero */}
+            <style>{`
+              @keyframes challenge-pop {
+                0%   { transform: scale(0.55) translateY(-16px); opacity: 0; }
+                60%  { transform: scale(1.06) translateY(3px);   opacity: 1; }
+                80%  { transform: scale(0.97) translateY(-1px);  opacity: 1; }
+                100% { transform: scale(1)   translateY(0px);   opacity: 1; }
+              }
+              .challenge-pop { animation: challenge-pop 0.38s cubic-bezier(0.34,1.56,0.64,1) both; }
+            `}</style>
             <div
+              className="challenge-pop pointer-events-auto"
+              dir="rtl"
               style={{
-                position: "absolute",
-                bottom: -14,
-                left: tailLeft,
-                transform: "translateX(-50%)",
-                width: 0,
-                height: 0,
-                borderLeft: "13px solid transparent",
-                borderRight: "13px solid transparent",
-                borderTop: "14px solid #1e0a3c",
-                filter: "drop-shadow(0 3px 6px rgba(139,92,246,0.4))",
-              }}
-            />
-            {/* Header */}
-            <div className="flex items-center gap-2 justify-center">
-              <span className="text-xl">💎</span>
-              <span className="text-violet-300 font-black text-base">ירי קריסטל!</span>
-              <span className="text-xl">💎</span>
-            </div>
-            {/* Question */}
-            <div
-              className="w-full rounded-xl px-2 py-1.5 border border-white/10"
-              style={{
-                background: "linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 100%)",
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                borderRadius: 18,
+                padding: "8px 10px 10px",
+                background: "linear-gradient(160deg, #1e0a3c 0%, #0f0a2a 100%)",
+                border: "2px solid rgba(139,92,246,0.60)",
+                boxShadow: "0 0 0 1px rgba(34,211,238,0.20), 0 8px 40px rgba(0,0,0,0.80), 0 0 32px rgba(139,92,246,0.40)",
               }}
             >
-              <p className="text-white text-base font-bold text-center leading-snug">
-                {q.text_he}
-              </p>
-            </div>
-            {/* Answer grid */}
-            <div className="grid grid-cols-2 gap-1.5">
-              {ANSWER_KEYS.map(key => (
-                <AnswerButton
-                  key={key}
-                  answerKey={key}
-                  text={optionText(q, key)}
-                  onClick={() => handleAnswer(key)}
-                  disabled={isPending}
-                  state={
-                    lastAnswer === key
-                      ? (feedback?.isCorrect ? "correct" : "wrong")
-                      : "idle"
-                  }
-                />
-              ))}
+              {/* Header */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
+                <span style={{ fontSize: 18 }}>💎</span>
+                <span style={{ color: "#c4b5fd", fontWeight: 900, fontSize: 14 }}>ירי קריסטל!</span>
+                <span style={{ fontSize: 18 }}>💎</span>
+              </div>
+              {/* Question */}
+              <div style={{
+                background: "linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 100%)",
+                borderRadius: 10,
+                border: "1px solid rgba(255,255,255,0.10)",
+                padding: "7px 10px",
+              }}>
+                <p style={{
+                  color: "white", fontSize: 14, fontWeight: 700,
+                  textAlign: "center", lineHeight: 1.4, margin: 0,
+                }}>
+                  {q.text_he}
+                </p>
+              </div>
+              {/* Answer grid */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
+                {ANSWER_KEYS.map(key => (
+                  <AnswerButton
+                    key={key}
+                    answerKey={key}
+                    text={optionText(q, key)}
+                    onClick={() => handleAnswer(key)}
+                    disabled={isPending}
+                    state={
+                      lastAnswer === key
+                        ? (feedback?.isCorrect ? "correct" : "wrong")
+                        : "idle"
+                    }
+                  />
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-          );
-        })()}
+        )}
       </section>
 
     </main>
