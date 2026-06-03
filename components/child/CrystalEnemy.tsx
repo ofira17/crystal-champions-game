@@ -32,16 +32,6 @@ export function getEnemyMeta(variant: EnemyVariant) {
   return { ...m, src: `/enemies/${m.slug}-1.png` };
 }
 
-// facingDeg: clockwise bearing from "up" toward the hero (0=up, 90=right, 180=down, 270=left).
-// We always render the front-facing sprite (-1.png) and mirror it horizontally when the
-// hero is to the LEFT of the enemy, so the enemy always faces the hero regardless of which
-// side it spawned on. This is more reliable than per-direction PNG files.
-function heroIsToLeft(facingDeg: number): boolean {
-  const a = ((facingDeg % 360) + 360) % 360;
-  // a > 180 means the bearing passes through the west arc → hero is to the LEFT
-  return a > 180;
-}
-
 export interface CrystalEnemyProps {
   worldId?:    string | null;
   variant?:    EnemyVariant;
@@ -49,6 +39,11 @@ export interface CrystalEnemyProps {
   damaged?:    boolean;
   hp?:         number;
   showName?:   boolean;
+  /** Arena-% X position of the enemy. Used with heroX for position-based flip. */
+  enemyX?:     number;
+  /** Arena-% X position of the hero. When enemyX > heroX the enemy faces LEFT (toward hero). */
+  heroX?:      number;
+  /** @deprecated — pass enemyX + heroX instead */
   facingDeg?:  number;
   animPhase?:  number;
   attacking?:  boolean;
@@ -62,6 +57,8 @@ export function CrystalEnemy({
   damaged   = false,
   hp        = 100,
   showName  = true,
+  enemyX,
+  heroX,
   facingDeg = 180,
   animPhase = 0,
   attacking = false,
@@ -71,12 +68,24 @@ export function CrystalEnemy({
   const meta = VARIANT_META[v];
   const px   = size ?? meta.size;
 
-  // Always use the front-facing sprite and mirror it with scaleX so the enemy
-  // reliably faces toward the hero regardless of which side it entered from.
+  // Always use the side-facing sprite (-1.png). The sprites face LEFT natively.
+  // Orientation rule: if the enemy is to the RIGHT of the hero (enemyX > heroX),
+  // the enemy must face LEFT (toward the hero) → no flip (scaleX 1).
+  // If the enemy is to the LEFT of the hero, flip to face RIGHT → scaleX(-1).
   const src = attacking
     ? `/enemies/${meta.slug}-5.png`
     : `/enemies/${meta.slug}-1.png`;
-  const facingLeft = heroIsToLeft(facingDeg);
+
+  // Derive facing from actual arena positions when available; fall back to angle.
+  const shouldFaceLeft: boolean =
+    enemyX !== undefined && heroX !== undefined
+      ? enemyX > heroX          // enemy is RIGHT of hero → face LEFT toward hero
+      : ((facingDeg % 360) + 360) % 360 > 180; // legacy fallback
+
+  // Sprites face LEFT natively, so:
+  //   shouldFaceLeft=true  → scaleX(1)  (no flip, already faces left)
+  //   shouldFaceLeft=false → scaleX(-1) (flip to face right)
+  const flipX = shouldFaceLeft ? 1 : -1;
 
   const lowHp = hp <= 30;
   const dropShadow = damaged
@@ -146,7 +155,7 @@ export function CrystalEnemy({
             width: "100%",
             height: "100%",
             objectFit: "contain",
-            transform: `translateY(${bob}px) scaleX(${facingLeft ? -1 : 1})`,
+            transform: `translateY(${bob}px) scaleX(${flipX})`,
             willChange: "transform",
             userSelect: "none",
             pointerEvents: "none",

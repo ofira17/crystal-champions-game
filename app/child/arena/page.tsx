@@ -2550,7 +2550,8 @@ function ArenaPageContent() {
               hp={bossHp}
               damaged={enemyHit === "flash"}
               showName={false}
-              facingDeg={enemyStateRef.current.facingDeg}
+              enemyX={enemyStateRef.current.x}
+              heroX={heroPosRef.current.x}
               animPhase={enemyStateRef.current.animPhase}
               locked={phase === "battle" || phase === "challenge"}
             />
