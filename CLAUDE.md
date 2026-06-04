@@ -1,5 +1,22 @@
 @AGENTS.md
 
+## Permission / Confirmation Rule
+
+For normal safe development tasks, do not ask the user for confirmation after every small code edit. Proceed independently through safe file edits, formatting fixes, UI/CSS tweaks, local build checks, commits, pushes to canonical/main, and production verification.
+
+Only ask the user before:
+- Deleting files
+- Changing secrets/env variables
+- Changing Supabase/auth/security/RLS/database schema
+- Changing Vercel/project config
+- Installing new packages
+- Making broad unrelated refactors
+- Changing app logic outside the requested fix
+
+For each task: understand the request → make the smallest safe fix → run checks → commit → push to canonical/main → deploy/verify production when required → report only at the end.
+
+Report only: files changed, commit.
+
 ## Enemy Damage Visual Rule (CANONICAL — DO NOT revert)
 
 Enemy starts LARGE and shrinks with each HP loss. At final hit, reaches small baseline, then dissolves.
