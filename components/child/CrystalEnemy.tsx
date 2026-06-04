@@ -153,11 +153,23 @@ export function CrystalEnemy({
             }} />
           </>
         )}
+        {/* Yellow aura behind sprite */}
+        <div style={{
+          position: "absolute",
+          inset: "-18%",
+          borderRadius: "50%",
+          background: "radial-gradient(ellipse at center, rgba(255,230,80,0.28) 0%, rgba(255,200,40,0.14) 45%, transparent 75%)",
+          boxShadow: "0 0 32px 8px rgba(255,220,60,0.35), 0 0 12px 4px rgba(255,200,40,0.25)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }} />
         <img
           src={src}
           alt={meta.nameHe}
           draggable={false}
           style={{
+            position: "relative",
+            zIndex: 1,
             width: "100%",
             height: "100%",
             objectFit: "contain",

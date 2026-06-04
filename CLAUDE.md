@@ -31,6 +31,10 @@ Enemy starts LARGE and shrinks with each HP loss. At final hit, reaches small ba
 
 **AI bounds rule:** In the arena page AI loop, `eSz` MUST be computed as `max(150, min(VAR_MAX, round(ah2 * 0.62)))` and halfH MUST include the HP bar offset (`eSz/2 + 17`). eyMin/eyMax must be guarded so eyMin < eyMax always.
 
+## Enemy Yellow Aura (CANONICAL — DO NOT remove)
+
+A soft yellow radial glow is rendered behind every enemy sprite via an absolute-positioned `div` inside the size container in `CrystalEnemy.tsx`. It uses `inset: "-18%"` so the aura scales proportionally with the sprite at all HP sizes. The aura sits at `zIndex: 0`; the `<img>` sits at `zIndex: 1`. Do not remove or suppress this aura.
+
 ## Miti Size Rule
 
 Miti must keep normal full size during arena staging and battle walking. Only the enemy uses HP-based shrinking.
@@ -99,12 +103,20 @@ Vercel may cache a prior build or be mid-deploy. To confirm a change is live, fe
 - **Do NOT use Lovable** — Lovable is preview-only and not the source of truth.
 - The root URL (`/`) redirects to `/child/arena`, which then redirects to `/auth/login` for unauthenticated users. This is correct behavior — "Create Next App" in the title is a metadata issue, NOT a broken deployment.
 
-## Deployment Status (as of 2026-06-03)
+## Deployment Status (as of 2026-06-05)
 
 - **Correct production deployment is live** from `C:\Users\97253\Desktop\קלוד\crystal-champions`
 - **Production URL:** https://crystal-champions-game.vercel.app
-- **Live commit:** 498a094
-- **Title issue:** was metadata only (`"Create Next App"`), fixed to `"Crystal Champions"` — not a wrong-app deployment
+- **Live commit:** 463c697
+- **Last deploy:** manual redeploy via `vercel redeploy` — GitHub push did not auto-trigger Vercel
+
+## Recovery: GitHub push did not trigger Vercel
+
+If `git push canonical main` does not trigger a Vercel build, manually redeploy the latest production deployment:
+```
+vercel redeploy <latest-production-deployment-url> --target production
+```
+Then verify production chunks changed: fetch https://crystal-champions-game.vercel.app and confirm `/_next/static/chunks/` URLs changed from the previous build. If chunks are identical, the new build is not live — redeploy again.
 
 ## QA Rules
 
