@@ -228,3 +228,19 @@ Then verify production chunks changed: fetch https://crystal-champions-game.verc
 - Miti and the enemy must **face each other** like a real battle (Miti on the left facing right, enemy on the right facing left).
 - Crystal shots must travel **from Miti's real on-screen position** to the **enemy's current body/center position**.
 - **No hardcoded wrong-direction shots.** Shot direction must be calculated from actual element positions at fire time.
+
+
+## Deployment Mismatch Rule
+
+**Two remotes, one source of truth:**
+- `origin` = `ofira17/crystal-champions` — development mirror only
+- `canonical` = `ofira17/crystal-champions-game` — Vercel watches this; all deployments come from here
+
+**If production is behind:**
+1. Verify the fix commit exists locally: `git log --oneline | grep <sha>`
+2. Push to canonical/main: `git push canonical main`
+3. Vercel auto-deploys; confirm with `npx vercel ls` — latest entry should be `● Ready` and aliased to `crystal-champions-game.vercel.app`
+4. If auto-deploy did not trigger, run `npx vercel --prod` from local source (never redeploy an old production slug)
+5. Verify live build: fetch the production URL and confirm new chunk hashes in the HTML
+
+**Never push only to origin and expect production to update.**
