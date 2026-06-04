@@ -17,6 +17,37 @@ For each task: understand the request → make the smallest safe fix → run che
 
 Report only: files changed, commit.
 
+## Local Permissions File — Exact Path Rule
+
+The Claude Code local permissions file for this project **must** be located at:
+
+```
+C:\Users\97253\Desktop\קלוד\crystal-champions\.claude\settings.local.json
+```
+
+- The `.claude` folder must be **inside** the `crystal-champions` project folder.
+- Do **NOT** create `settings.local.json` anywhere outside that path (e.g., not in `crystal-champions.claude\` as a sibling folder).
+
+## Local Permission Policy (crystal-champions.claude/settings.local.json)
+
+`defaultMode: acceptEdits` — file edits auto-approved; Bash commands require explicit allow entry.
+
+**Auto-allowed (no prompt):**
+- `git status`, `git diff`, `git log`, `git add *`, `git commit *`
+- `git push canonical main`
+- `npm run build`, `npm run lint`, `npm test`, `npx tsc --noEmit`
+- `vercel inspect *`, `vercel list`, `vercel ls`, `vercel redeploy *`
+- All Read / Edit / Write / Glob / Grep file operations
+
+**Always denied (hard block):**
+- Reading `.env` or `.env.*` files
+- `rm`, `rmdir`, `del`, `Remove-Item` (any file/folder deletion)
+- `npm install`, `npm i`, `npm ci` (package installs)
+- Supabase schema/migration/function-deploy commands
+- Editing `vercel.json` or `.vercelignore`
+
+**Never set:** `bypassPermissions` or `dangerously-skip-permissions`.
+
 ## Battle Enemy Flow (CANONICAL — DO NOT revert)
 
 ### Entry sequence
