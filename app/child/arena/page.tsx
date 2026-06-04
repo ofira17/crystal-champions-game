@@ -810,6 +810,7 @@ function ArenaPageContent() {
   const [correctStreak,      setCorrectStreak]      = useState(0);
   const [strongShot,         setStrongShot]         = useState(false);
   const [enemyAnchor, setEnemyAnchor] = useState<{ top: number; left: number } | null>(null);
+  const [arenaH,       setArenaH]         = useState(400);
   const [isPending,     startTransition]  = useTransition();
 
   // ── Portrait guard (mobile only) ──────────────────────────────────────────
@@ -1151,6 +1152,19 @@ function ArenaPageContent() {
   const arenaRef    = useRef<HTMLElement>(null);
   const bgMusicRef  = useRef<HTMLAudioElement | null>(null);
 
+  // ── Measure arena height for responsive enemy sizing ─────────────────────
+  // Must run after the arena section is in the DOM (phase === "battle").
+  useEffect(() => {
+    if (phase !== "battle") return;
+    const measure = () => {
+      const h = arenaRef.current?.offsetHeight ?? 0;
+      if (h > 0) setArenaH(h);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [phase]);
+
   // ── Init ───────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!missionId) { setErrMsg("הרפתקה לא נמצאה"); setPhase("error"); return; }
@@ -1423,13 +1437,23 @@ function ArenaPageContent() {
       if (age > 0.2) {
         const aw2 = arenaRef.current?.offsetWidth  ?? 700;
         const ah2 = arenaRef.current?.offsetHeight ?? 400;
-        // Use actual sprite base sizes (260-340px) so bounds account for large sprites.
-        // eyMin=50 keeps enemy in lower half where center-bottom scale stays visible above arena top.
-        const eSz = v === "giant" ? 340 : v === "wizard" ? 300 : v === "bat" ? 280 : 260;
+        // Scale sprite size to arena height so enemy fills ~62% of visible arena.
+        // Capped at each variant's designed max so it never looks disproportionate on large screens.
+        const VAR_MAX = v === "giant" ? 340 : v === "wizard" ? 300 : v === "bat" ? 280 : 260;
+        const eSz = Math.max(150, Math.min(VAR_MAX, Math.round(ah2 * 0.62)));
+        // The enemy wrapper is flex-col: HP bar (~30px) + 4px gap + sprite (eSz px).
+        // translate(-50%,-50%) centers the WHOLE column, so the sprite centre is
+        // (30+4)/2 = 17px BELOW the anchor.  halfH accounts for the full column height
+        // so clamp keeps the sprite (including HP bar) fully inside the arena.
+        const HP_BAR_HALF = 17;
+        const halfH = eSz / 2 + HP_BAR_HALF;
         const exMin = Math.round((eSz / 2 / aw2) * 100) + 2;
         const exMax = 100 - exMin;
-        const eyMin = Math.max(45, Math.round((eSz / 2 / ah2) * 100) + 2);
-        const eyMax = Math.min(85, 100 - Math.round((eSz / 2 / ah2) * 100) - 2);
+        const eyMinCalc = Math.round((halfH / ah2) * 100) + 2;
+        const eyMaxCalc = 100 - Math.round((halfH / ah2) * 100) - 2;
+        // Guard: if sprite is taller than arena, clamp to centre
+        const eyMin = Math.min(eyMinCalc, 50);
+        const eyMax = Math.max(eyMaxCalc, eyMin + 5);
         if (s.x < exMin) { s.x = exMin; s.vx =  Math.abs(s.vx) * 0.6; }
         if (s.x > exMax) { s.x = exMax; s.vx = -Math.abs(s.vx) * 0.6; }
         if (s.y < eyMin) { s.y = eyMin; s.vy =  Math.abs(s.vy) * 0.6; }
@@ -2062,9 +2086,14 @@ function ArenaPageContent() {
     );
   }
 
+  // Responsive enemy size: 62% of the measured arena height, capped at each variant's designed max.
+  // Uses arenaH state (updated once arena mounts). Minimum 150px so tiny screens still show something.
+  const variantMaxSize = getEnemyMeta(enemyVariant).size;
+  const dynEnemySize = Math.max(150, Math.min(variantMaxSize, Math.round(arenaH * 0.62)));
+
   return (
     <main
-      className="min-h-screen flex flex-col relative overflow-hidden"
+      className="h-screen flex flex-col relative overflow-hidden"
       style={{ background: "linear-gradient(180deg, #2e1065 0%, #1e1b4b 50%, #0c1a4a 100%)" }}
       dir="rtl"
     >
@@ -2414,7 +2443,6 @@ function ArenaPageContent() {
           backgroundRepeat: "no-repeat",
           border:    "3px solid rgba(120,60,220,0.70)",
           boxShadow: "0 0 50px rgba(80,30,200,0.35), inset 0 0 60px rgba(40,10,120,0.22)",
-          minHeight: 400,
           overflow: "hidden",
         }}
         onClick={() => {
@@ -2551,7 +2579,7 @@ function ArenaPageContent() {
           >
             {/* HP bar above the enemy (never rotates) */}
             <div style={{
-              width: Math.min(240, Math.round(120 + (getEnemyMeta(enemyVariant).size - 120) * (bossHp / 100)) + 30),
+              width: Math.min(240, Math.round(120 + (dynEnemySize - 120) * (bossHp / 100)) + 30),
               transition: "width 0.35s ease-out",
               background: "rgba(0,0,0,0.45)",
               borderRadius: 8,
@@ -2585,7 +2613,7 @@ function ArenaPageContent() {
             {/* Inline-SVG enemy — rotates to face hero, animates per archetype */}
             <CrystalEnemy
               variant={enemyVariant}
-              size={getEnemyMeta(enemyVariant).size}
+              size={dynEnemySize}
               hp={bossHp}
               damaged={enemyHit === "flash"}
               showName={false}

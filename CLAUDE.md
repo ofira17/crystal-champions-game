@@ -2,31 +2,34 @@
 
 ## Enemy Damage Visual Rule (CANONICAL — DO NOT revert)
 
-Enemy starts VERY LARGE and shrinks with each hit, reaching small size only on the final hit, then dissolves.
+Enemy starts LARGE and shrinks with each HP loss. At final hit, reaches small baseline, then dissolves.
 - `opacity` must stay at 1 throughout battle — never fade the enemy based on HP
-- **NEVER use CSS `transform: scale()` for HP-based sizing** — `overflow: hidden` on the arena clips scaled content that extends above/below the arena bounds, making the enemy appear tiny (only feet visible). Instead, drive size via `width`/`height` directly on the inner div.
-- Size formula in `CrystalEnemy.tsx`: `visualPx = 120 + (px - 120) * (hp / 100)`
-  - At 100% HP → `px` (the large base size: 260–340 px depending on variant)
-  - At 0% HP → 120 px (old tiny "small" size), then defeat animation
+- **NEVER use CSS `transform: scale()` for HP-based sizing** — `overflow: hidden` clips scaled content. Drive size via `width`/`height` directly on the inner div.
+- Size formula in `CrystalEnemy.tsx`: `visualPx = SMALL_PX + (px - SMALL_PX) * (hp / 100)`
+  - At 100% HP → `px` (the dynamic base size from `dynEnemySize` in arena page)
+  - At 0% HP → `SMALL_PX` (120px baseline), then defeat animation
 - Transition: `width 0.35s ease-out, height 0.35s ease-out` — each hit visibly shrinks
-- Hit reaction (flash + shake): `enemy-crystal-hit` class on inner div (unchanged)
 
-## Enemy Base Size (DO NOT reduce)
+## Enemy Size — Responsive Sizing Rule (CANONICAL — DO NOT revert)
 
-**Measured root cause (Playwright, 2026-06-04):** Production was running goblin=110px, bat=120px, giant=150px, wizard=130px — the size-increase commit was pushed to `origin/main` but NOT to `canonical/main` (Vercel deploy remote). At 1.8× HP scale + 65-78% sprite canvas coverage, the visible character was only ~130-180px — genuinely tiny.
+**Root cause (2026-06-04):** The battle `<main>` used `min-h-screen` and the arena had `minHeight: 400`. On mobile landscape (375px viewport), the layout extended ~520px but the viewport clipped at 375px. The AI loop used `arenaRef.current.offsetHeight = 400px` (DOM height) for bounds, placing the enemy at y=65% × 400 = 260px from arena top. Only 255px of the arena was visible. The enemy center was 5px below the viewport. Only the top 108px (42%) of the 260px sprite was visible — making it look tiny. Additionally, HP-based shrinking caused the sprite to grow MORE visible (less clipped) as it took damage — backwards from intended.
 
-**Secondary measured issue:** AI loop bounds used eSz=110-150px (old sizes), letting the enemy roam to y=16% of the arena. At y=16%, with `transformOrigin: center bottom` scale, the visual top extends 252px ABOVE the arena boundary → overflow:hidden clips 252px, leaving only ~216px visible even at the new large sizes. Fix: AI bounds now use actual base sizes (260-340px) and enforce eyMin=50% so enemy stays in the lower half where the center-bottom scale produces 350-400px of visible enemy.
+**Second cause:** The enemy wrapper is a flex column: HP bar (≈30px) + 4px gap + sprite (`eSz` px). `translate(-50%, -50%)` centers the whole column, so the sprite centre is 17px BELOW the anchor. The old bounds used only `eSz/2` as half-height, causing the sprite bottom to consistently overflow the arena by ~17px (clipped by `overflow: hidden`).
+
+**Fix applied:**
+1. Battle `<main>` changed from `min-h-screen` to `h-screen` — layout is constrained to viewport.
+2. `minHeight: 400` removed from arena section — arena fills remaining viewport space via `flex-1`.
+3. `arenaH` state + resize-aware `useEffect` measures the actual rendered arena height.
+4. `dynEnemySize = max(150, min(variantMax, round(arenaH * 0.62)))` — enemy always fills ~62% of the visible arena height, capped at variant design max (260-340px).
+5. Bounds clamping in AI loop uses `halfH = eSz/2 + 17` (accounts for HP bar offset) and responsive `eSz` from arena height — eyMin/eyMax are always valid (eyMin < eyMax).
 
 **Required base sizes in `VARIANT_META` (components/child/CrystalEnemy.tsx):**
-- goblin: 260px
+- goblin: 260px (design max — actual size will be ≤ this, scaled to arena height)
 - bat: 280px
 - giant: 340px
 - wizard: 300px
 
-At 100% HP (scale 1.8×) these produce 468-612px visual rendering; with center-bottom anchor at y≥50% of arena, 350-400px is visible above the overflow:hidden clip line.
-Do NOT reduce these below the values above or the enemy will look tiny again.
-
-**AI bounds rule:** `eSz` in the arena page AI loop MUST match the sprite base sizes (260, 280, 340, 300) and eyMin MUST be clamped to ≥50% so the enemy center stays in the lower half of the arena.
+**AI bounds rule:** In the arena page AI loop, `eSz` MUST be computed as `max(150, min(VAR_MAX, round(ah2 * 0.62)))` and halfH MUST include the HP bar offset (`eSz/2 + 17`). eyMin/eyMax must be guarded so eyMin < eyMax always.
 
 ## Miti Size Rule
 
@@ -107,6 +110,7 @@ Vercel may cache a prior build or be mid-deploy. To confirm a change is live, fe
 
 - Visual issues must be verified in the **real production arena** at https://crystal-champions-game.vercel.app/child/arena, not only by reading code.
 - **All child profiles must be tested, not only child 1.** Arena entry must work for child 2+ when they have an available challenge. The arena button must be enabled for any child in `hero_training` or `world_mysteries` mode, even if no `child_missions` row exists for them.
+- **Visual arena QA requires a real authenticated parent+child session or user-provided video. Do not create live test users unless cleanup is included.**
 
 ## Grade-Level Question Rules (Israeli MoE Curriculum — Source of Truth)
 
