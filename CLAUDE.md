@@ -78,20 +78,20 @@ C:\Users\97253\Desktop\קלוד\crystal-champions\.claude\settings.local.json
 1. Battle `<main>` changed from `min-h-screen` to `h-screen` — layout is constrained to viewport.
 2. `minHeight: 400` removed from arena section — arena fills remaining viewport space via `flex-1`.
 3. `arenaH` state + resize-aware `useEffect` measures the actual rendered arena height.
-4. `dynEnemySize = max(150, min(variantMax, round(arenaH * 0.62)))` — enemy always fills ~62% of the visible arena height, capped at variant design max (260-340px).
+4. `dynEnemySize = max(150, min(variantMax, round(arenaH * 0.72)))` — enemy always fills ~72% of the visible arena height, capped at variant design max (320-400px).
 5. Bounds clamping in AI loop uses `halfH = eSz/2 + 17` (accounts for HP bar offset) and responsive `eSz` from arena height — eyMin/eyMax are always valid (eyMin < eyMax).
 
 **Required base sizes in `VARIANT_META` (components/child/CrystalEnemy.tsx):**
-- goblin: 260px (design max — actual size will be ≤ this, scaled to arena height)
-- bat: 280px
-- giant: 340px
-- wizard: 300px
+- goblin: 320px (design max — actual size will be ≤ this, scaled to arena height)
+- bat: 340px
+- giant: 400px
+- wizard: 360px
 
-**AI bounds rule:** In the arena page AI loop, `eSz` MUST be computed as `max(150, min(VAR_MAX, round(ah2 * 0.62)))` and halfH MUST include the HP bar offset (`eSz/2 + 17`). eyMin/eyMax must be guarded so eyMin < eyMax always.
+**AI bounds rule:** In the arena page AI loop, `eSz` MUST be computed as `max(150, min(VAR_MAX, round(ah2 * 0.72)))` and halfH MUST include the HP bar offset (`eSz/2 + 17`). eyMin/eyMax must be guarded so eyMin < eyMax always.
 
 ## Enemy Yellow Aura (CANONICAL — DO NOT remove)
 
-A soft yellow radial glow is rendered behind every enemy sprite via an absolute-positioned `div` inside the size container in `CrystalEnemy.tsx`. It uses `inset: "-18%"` so the aura scales proportionally with the sprite at all HP sizes. The aura sits at `zIndex: 0`; the `<img>` sits at `zIndex: 1`. Do not remove or suppress this aura.
+A clearly visible yellow radial glow is rendered behind every enemy sprite via an absolute-positioned `div` inside the size container in `CrystalEnemy.tsx`. It uses `inset: "-30%"` so the aura scales proportionally with the sprite at all HP sizes and is clearly visible. The aura uses high-opacity gradient (center 0.70, mid 0.50, outer 0.25) and strong box-shadow (48px/16px/0.75). The aura sits at `zIndex: 0`; the `<img>` sits at `zIndex: 1`. Do not remove, suppress, or reduce the opacity of this aura.
 
 ## Miti Size Rule
 
