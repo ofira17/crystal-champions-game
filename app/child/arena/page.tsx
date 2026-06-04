@@ -1447,8 +1447,8 @@ function ArenaPageContent() {
         const ah2 = arenaRef.current?.offsetHeight ?? 400;
         // Scale sprite size to arena height so enemy fills ~62% of visible arena.
         // Capped at each variant's designed max so it never looks disproportionate on large screens.
-        const VAR_MAX = v === "giant" ? 340 : v === "wizard" ? 300 : v === "bat" ? 280 : 260;
-        const eSz = Math.max(150, Math.min(VAR_MAX, Math.round(ah2 * 0.62)));
+        const VAR_MAX = v === "giant" ? 400 : v === "wizard" ? 360 : v === "bat" ? 340 : 320;
+        const eSz = Math.max(150, Math.min(VAR_MAX, Math.round(ah2 * 0.72)));
         // The enemy wrapper is flex-col: HP bar (~30px) + 4px gap + sprite (eSz px).
         // translate(-50%,-50%) centers the WHOLE column, so the sprite centre is
         // (30+4)/2 = 17px BELOW the anchor.  halfH accounts for the full column height
@@ -2106,7 +2106,7 @@ function ArenaPageContent() {
   // Responsive enemy size: 62% of the measured arena height, capped at each variant's designed max.
   // Uses arenaH state (updated once arena mounts). Minimum 150px so tiny screens still show something.
   const variantMaxSize = getEnemyMeta(enemyVariant).size;
-  const dynEnemySize = Math.max(150, Math.min(variantMaxSize, Math.round(arenaH * 0.62)));
+  const dynEnemySize = Math.max(150, Math.min(variantMaxSize, Math.round(arenaH * 0.72)));
 
   return (
     <main

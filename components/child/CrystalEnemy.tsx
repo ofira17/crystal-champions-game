@@ -7,10 +7,10 @@ export type EnemyVariant = "goblin" | "bat" | "giant" | "wizard";
 export const ENEMY_VARIANTS: EnemyVariant[] = ["goblin", "bat", "giant", "wizard"];
 
 const VARIANT_META: Record<EnemyVariant, { nameHe: string; glow: string; size: number; slug: string }> = {
-  goblin: { nameHe: "גובלין השאלות",  glow: "rgba(74, 222, 128, 0.75)",  size: 260, slug: "question-goblin" },
-  bat:    { nameHe: "עטלף הטעויות",   glow: "rgba(167, 139, 250, 0.80)", size: 280, slug: "mistake-bat" },
-  giant:  { nameHe: "ענק הזיכרון",     glow: "rgba(251, 113,  30, 0.90)", size: 340, slug: "memory-giant" },
-  wizard: { nameHe: "קוסם הבלבול",     glow: "rgba(168, 85, 247, 0.85)",  size: 300, slug: "confusion-wizard" },
+  goblin: { nameHe: "גובלין השאלות",  glow: "rgba(74, 222, 128, 0.75)",  size: 320, slug: "question-goblin" },
+  bat:    { nameHe: "עטלף הטעויות",   glow: "rgba(167, 139, 250, 0.80)", size: 340, slug: "mistake-bat" },
+  giant:  { nameHe: "ענק הזיכרון",     glow: "rgba(251, 113,  30, 0.90)", size: 400, slug: "memory-giant" },
+  wizard: { nameHe: "קוסם הבלבול",     glow: "rgba(168, 85, 247, 0.85)",  size: 360, slug: "confusion-wizard" },
 };
 
 function worldToVariant(worldId: string | null): EnemyVariant {
@@ -156,10 +156,10 @@ export function CrystalEnemy({
         {/* Yellow aura behind sprite */}
         <div style={{
           position: "absolute",
-          inset: "-18%",
+          inset: "-30%",
           borderRadius: "50%",
-          background: "radial-gradient(ellipse at center, rgba(255,230,80,0.28) 0%, rgba(255,200,40,0.14) 45%, transparent 75%)",
-          boxShadow: "0 0 32px 8px rgba(255,220,60,0.35), 0 0 12px 4px rgba(255,200,40,0.25)",
+          background: "radial-gradient(ellipse at center, rgba(255,240,100,0.70) 0%, rgba(255,210,50,0.50) 35%, rgba(255,190,30,0.25) 60%, transparent 80%)",
+          boxShadow: "0 0 48px 16px rgba(255,220,60,0.75), 0 0 24px 8px rgba(255,200,40,0.60), inset 0 0 20px rgba(255,240,120,0.30)",
           pointerEvents: "none",
           zIndex: 0,
         }} />
