@@ -97,11 +97,11 @@ export function CrystalEnemy({
 
   const bob = Math.sin(animPhase * Math.PI * 2) * 4;
 
-  // Size shrinks with HP: at 100 HP → base px (large); at 0 HP → SMALL_PX (old tiny size).
+  // Size shrinks with HP: at 100 HP → base px; at 0 HP → px*0.5 (50% floor).
   // Direct width/height (no CSS scale) so overflow:hidden on the arena never clips the sprite.
-  const SMALL_PX = 120;
   const clampedHp = Math.max(0, Math.min(100, hp));
-  const visualPx = Math.round(SMALL_PX + (px - SMALL_PX) * (clampedHp / 100));
+  const minPx = Math.round(px * 0.5);
+  const visualPx = Math.round(minPx + (px - minPx) * (clampedHp / 100));
 
   return (
     <div className="flex flex-col items-center gap-1 select-none">

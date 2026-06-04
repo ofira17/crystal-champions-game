@@ -17,15 +17,25 @@ For each task: understand the request → make the smallest safe fix → run che
 
 Report only: files changed, commit.
 
-## Enemy Damage Visual Rule (CANONICAL — DO NOT revert)
+## Battle Enemy Flow (CANONICAL — DO NOT revert)
 
-Enemy starts LARGE and shrinks with each HP loss. At final hit, reaches small baseline, then dissolves.
-- `opacity` must stay at 1 throughout battle — never fade the enemy based on HP
+### Entry sequence
+1. Miti auto-walks into arena first (staging ~1050ms, x=11→35). Enemy is hidden (`opacity:0` on enemyRef div).
+2. When staging ends, enemy SUDDENLY appears inside the arena with a pop animation (`enemy-appear 0.55s`). The enemy AI runs during staging at 2.5× speed so it is already well inside the arena when it becomes visible.
+3. Enemy starts at 100% size (full `dynEnemySize` px).
+
+### Size shrink on correct answers
 - **NEVER use CSS `transform: scale()` for HP-based sizing** — `overflow: hidden` clips scaled content. Drive size via `width`/`height` directly on the inner div.
-- Size formula in `CrystalEnemy.tsx`: `visualPx = SMALL_PX + (px - SMALL_PX) * (hp / 100)`
-  - At 100% HP → `px` (the dynamic base size from `dynEnemySize` in arena page)
-  - At 0% HP → `SMALL_PX` (120px baseline), then defeat animation
-- Transition: `width 0.35s ease-out, height 0.35s ease-out` — each hit visibly shrinks
+- Size formula in `CrystalEnemy.tsx`: `minPx = px*0.5; visualPx = minPx + (px - minPx) * (hp / 100)`
+  - At 100% HP → `px` (full size)
+  - At 0% HP → `px * 0.5` (50% of starting size — the floor enforced DURING the round)
+- Transition: `width 0.35s ease-out, height 0.35s ease-out` — each correct hit visibly shrinks
+- Enemy never shrinks below 50% of its starting size while the round is active.
+
+### Victory dissolve
+- When the child reaches ≥90% correct answers AND the boss is defeated: enemy dissolves with a smooth white fade-out animation (`enemy-dissolve 0.95s`) directly in the arena, then the victory screen appears. No separate shatter animation.
+- If <90% correct + boss defeated: victory screen appears immediately.
+- The `victory-anim` phase is no longer triggered from the answer/megahit handlers.
 
 ## Enemy Size — Responsive Sizing Rule (CANONICAL — DO NOT revert)
 

@@ -793,6 +793,8 @@ function ArenaPageContent() {
   const [lastAnswer,    setLastAnswer]   = useState<AnswerKey | null>(null);
   const [muted,         setMuted]         = useState(false);
   const [enemyHit,      setEnemyHit]      = useState<"flash" | "tint" | false>(false);
+  const [enemyVisible,   setEnemyVisible]   = useState(false);
+  const [enemyDissolving, setEnemyDissolving] = useState(false);
   const [megaBlasting,  setMegaBlasting]  = useState(false);
   const [heroAnim,      setHeroAnim]      = useState<"idle" | "dash" | "recoil">("idle");
   const [showAimLine,   setShowAimLine]   = useState(false);
@@ -1245,15 +1247,21 @@ function ArenaPageContent() {
     if (phase === "battle") {
       // Reset contact throttle so the first contact of every new enemy fires immediately
       lastContactRef.current = 0;
-      // Staging: hero walks in from left edge, contact blocked for ~1s
+      // Staging: hero walks in from left edge, contact blocked for ~1s; enemy hidden until staging ends
       stagingRef.current = true;
+      setEnemyVisible(false);
+      setEnemyDissolving(false);
       heroPosRef.current = { x: 11, y: HERO_BATTLE_Y };
       heroPosForAiRef.current = { x: 11, y: HERO_BATTLE_Y };
       setHeroPos({ x: 11, y: HERO_BATTLE_Y });
       setHeroFacingLeft(false);
       heroFacingLeftRef.current = false;
       setIsStagingActive(true);
-      const stagingTimer = setTimeout(() => { stagingRef.current = false; setIsStagingActive(false); }, 1050);
+      const stagingTimer = setTimeout(() => {
+        stagingRef.current = false;
+        setIsStagingActive(false);
+        setEnemyVisible(true); // enemy suddenly appears after Miti walks in
+      }, 1050);
       const v = enemyVariantRef.current;
       // Pick an entry point at the arena edge (not outside) so the sprite is never clipped
       let x = 50, y = 8;
@@ -1789,11 +1797,13 @@ function ArenaPageContent() {
       if (res.bossDefeated) {
         const totalAnswered = answered + 1;
         const pct = totalAnswered > 0 ? newCorrect / totalAnswered : 0;
-        if (pct >= 0.7) {
+        if (pct >= 0.9) {
           bgMusicRef.current?.pause();
           playSound("victory");
-          setPhase("victory-anim");
-          await new Promise(r => setTimeout(r, 2200));
+          // Enemy dissolves in-arena with smooth white fade before victory screen
+          setEnemyDissolving(true);
+          await new Promise(r => setTimeout(r, 950));
+          setEnemyDissolving(false);
         }
         setPhase("victory");
       } else if (res.allAnswered) {
@@ -1836,9 +1846,12 @@ function ArenaPageContent() {
       if (res.bossDefeated) {
         const totalAnswered = answered;
         const pct = totalAnswered > 0 ? correctCount / totalAnswered : 0;
-        if (pct >= 0.7) {
-          setPhase("victory-anim");
-          await new Promise(r => setTimeout(r, 2200));
+        if (pct >= 0.9) {
+          bgMusicRef.current?.pause();
+          playSound("victory");
+          setEnemyDissolving(true);
+          await new Promise(r => setTimeout(r, 950));
+          setEnemyDissolving(false);
         }
         setPhase("victory");
       } else {
@@ -2103,6 +2116,25 @@ function ArenaPageContent() {
     >
       {/* All arena animation keyframes and classes */}
       <style>{`
+        /* ── Enemy sudden appearance ── */
+        @keyframes enemy-appear {
+          0%   { transform: scale(0.05); opacity: 0; filter: brightness(6) saturate(0); }
+          45%  { transform: scale(1.18); opacity: 1; filter: brightness(2.5); }
+          70%  { transform: scale(0.92); filter: brightness(1.4); }
+          100% { transform: scale(1);   filter: brightness(1); }
+        }
+        .enemy-appear-anim { animation: enemy-appear 0.55s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+        /* ── Enemy dissolve (white fade-out) ── */
+        @keyframes enemy-dissolve {
+          0%   { opacity: 1; filter: brightness(1) saturate(1) blur(0px); }
+          25%  { opacity: 0.92; filter: brightness(5) saturate(0.1) blur(0.5px); }
+          55%  { opacity: 0.6;  filter: brightness(10) saturate(0) blur(3px); }
+          80%  { opacity: 0.2;  filter: brightness(14) saturate(0) blur(7px); }
+          100% { opacity: 0;    filter: brightness(18) saturate(0) blur(12px); }
+        }
+        .enemy-dissolve-anim { animation: enemy-dissolve 0.95s ease-out forwards; }
+
         /* ── Roaming minion wing flap ── */
         @keyframes minion-flap {
           0%   { transform: rotate(-18deg) scaleY(0.85); }
@@ -2566,19 +2598,32 @@ function ArenaPageContent() {
             willChange: "transform",
             zIndex: 5,
             pointerEvents: "none",
+            opacity: enemyVisible ? 1 : 0,
           }}
         >
+          {/* Appear/dissolve wrapper — remounts (via key) to replay appear animation each new enemy */}
           <div
-            className={enemyShake ? "enemy-hit-shake" : ""}
+            key={enemyVisible ? "shown" : "hidden"}
+            style={{
+              animation: enemyDissolving
+                ? "enemy-dissolve 0.95s ease-out forwards"
+                : enemyVisible
+                ? "enemy-appear 0.55s cubic-bezier(0.34,1.56,0.64,1) forwards"
+                : "none",
+            }}
+          >
+          <div
+            className={enemyShake && !enemyDissolving ? "enemy-hit-shake" : ""}
             style={{
               display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-              filter:
-                enemyHit === "flash"
-                  ? "brightness(2.6) saturate(0.2) drop-shadow(0 0 14px white)"
-                  : enemyHit === "tint"
-                  ? "brightness(1.4) sepia(1) saturate(3) hue-rotate(300deg)"
-                  : "none",
-              transition: "filter 0.15s ease",
+              filter: enemyDissolving
+                ? undefined
+                : enemyHit === "flash"
+                ? "brightness(2.6) saturate(0.2) drop-shadow(0 0 14px white)"
+                : enemyHit === "tint"
+                ? "brightness(1.4) sepia(1) saturate(3) hue-rotate(300deg)"
+                : "none",
+              transition: enemyDissolving ? "none" : "filter 0.15s ease",
             }}
           >
             {/* HP bar above the enemy (never rotates) */}
@@ -2626,6 +2671,7 @@ function ArenaPageContent() {
               animPhase={enemyStateRef.current.animPhase}
               locked={phase === "battle" || phase === "challenge"}
             />
+          </div>
           </div>
         </div>
 
