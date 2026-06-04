@@ -1524,11 +1524,22 @@ function ArenaPageContent() {
       let moved = false;
       let goingLeft = heroFacingLeftRef.current;
 
+      // Compute arena-aware hero bounds every tick so staging + free movement both respect them.
+      // Hero top = heroPos.y%, sprite = 190px + 22px name = 212px total, half-width = 63px.
+      const aw = arenaRef.current?.offsetWidth  ?? 700;
+      const ah = arenaRef.current?.offsetHeight ?? 400;
+      const heroHalfW = 63;
+      const heroH     = 212;
+      const xMinPct = (heroHalfW / aw) * 100 + 0.5;
+      const xMaxPct = 100 - xMinPct;
+      const yMinPct = (6 / ah) * 100;
+      const yMaxPct = Math.max(yMinPct + 10, ((ah - heroH - 6) / ah) * 100);
+
       // During staging: hero auto-walks right to battle position, ignore player input
       if (stagingRef.current) {
         if (x < HERO_BATTLE_X - 0.3) {
           x = Math.min(x + MOVE_SPEED * 1.3, HERO_BATTLE_X);
-          y = HERO_BATTLE_Y;
+          y = Math.min(HERO_BATTLE_Y, yMaxPct);
           moved = true;
           goingLeft = false;
           heroPosRef.current = { x, y };
@@ -1552,21 +1563,14 @@ function ArenaPageContent() {
         x += (dx / mag) * MOVE_SPEED;
         y += (dy / mag) * MOVE_SPEED;
         moved = true;
-        // Dynamic bounds: hero sprite center-x at heroPos.x%, top at heroPos.y%
-        // sprite: ~122px wide (61px half), 190px tall + 22px name label = 212px total
-        const aw = arenaRef.current?.offsetWidth  ?? 700;
-        const ah = arenaRef.current?.offsetHeight ?? 400;
-        const heroHalfW = 63;   // px — half of sprite width
-        const heroH     = 212;  // px — sprite height + name label
-        const xMinPct = (heroHalfW / aw) * 100 + 0.5;
-        const xMaxPct = 100 - xMinPct;
-        const yMinPct = (6 / ah) * 100;
-        const yMaxPct = Math.max(yMinPct + 10, ((ah - heroH - 6) / ah) * 100);
-        x = Math.max(xMinPct, Math.min(xMaxPct, x));
-        y = Math.max(yMinPct, Math.min(yMaxPct, y));
-        heroPosRef.current = { x, y };
-        heroPosForAiRef.current = { x, y };
-        setHeroPos({ x, y });
+      }
+      // Always clamp to arena bounds — prevents clipping at initial spawn and during idle
+      const cx = Math.max(xMinPct, Math.min(xMaxPct, x));
+      const cy = Math.max(yMinPct, Math.min(yMaxPct, y));
+      if (moved || cx !== heroPosRef.current.x || cy !== heroPosRef.current.y) {
+        heroPosRef.current = { x: cx, y: cy };
+        heroPosForAiRef.current = { x: cx, y: cy };
+        setHeroPos({ x: cx, y: cy });
       }
       // Hero always faces toward the enemy during movement and at rest
       const ex = enemyStateRef.current.x;

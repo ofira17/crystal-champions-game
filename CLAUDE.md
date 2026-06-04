@@ -75,7 +75,7 @@ All battle movement happens inside the arena only. Before each question, Miti an
 Arena: `app/child/arena/page.tsx`
 
 **Character positioning:**
-- Hero (Miti) starts at x=35 (battle position, left side of arena), y=60; enters from x=11
+- Hero (Miti) starts at x=35 (battle position, left side of arena), y=min(60, yMaxPct); enters from x=11. HERO_BATTLE_Y=60 is a soft target — it is clamped to yMaxPct=(ah-212-6)/ah×100 so Miti never clips below the arena on small screens.
 - Goblin enemy spawns at x=82–94 (right side)
 - Hero always uses left/right profile sprites — never `attack-front.png` or `attack-back.png`
 - Hero idle and attack sprites are chosen based on enemy.x vs hero.x (left = `idle-left` / `attack-left`, right = `idle-right` / `attack-right`)
