@@ -365,37 +365,47 @@ function CrystalProjectile({ result }: { result: "hit" | "miss" }) {
   );
 }
 
-// ── Feedback overlay ──────────────────────────────────────────────────────────
+// ── Feedback bar (below arena, compact — does NOT cover battle) ───────────────
 function FeedbackOverlay({ result, energyBefore }: { result: AnswerResult; energyBefore: number }) {
   return (
-    <div className="absolute inset-x-4 top-1/4 z-20 pointer-events-none feedback-pop">
-      <div className={`
-        rounded-3xl p-4 text-center border-2 shadow-2xl
-        ${result.isCorrect
-          ? "bg-emerald-950/95 border-emerald-400"
-          : "bg-slate-900/95 border-slate-500"}
-      `}>
-        {result.isCorrect ? (
-          <>
-            <p className="text-3xl font-black text-emerald-300 mb-1">💥 פגיעה!</p>
-            <p className="text-emerald-400 text-sm font-bold">האויב נחלש! {result.bossDamageDealt > 0 && `−${result.bossDamageDealt}%`}</p>
-            {result.megaHitAvailable ? (
-              <p className="text-violet-300 text-xs mt-1 font-black animate-pulse">⚡ מכת קריסטל עוצמתית מוכנה! ⚡</p>
-            ) : energyBefore < ENERGY_MAX ? (
-              <p className="text-violet-300 text-xs mt-1">כוח הקריסטל נטען ⚡</p>
-            ) : null}
-          </>
-        ) : (
-          <>
-            <p className="text-2xl font-black text-amber-300 mb-1">🛡️ נסה שוב!</p>
-            <p className="text-slate-300 text-xs mb-2">מגן האויב חסם את הקריסטל</p>
-            <div className="bg-white/10 rounded-xl px-3 py-2 border border-white/15">
-              <p className="text-slate-400 text-xs mb-0.5">הקריסטל הנכון היה:</p>
-              <p className="text-white font-black text-base">{result.correctAnswer}. {result.correctText}</p>
-            </div>
-          </>
-        )}
-      </div>
+    <div
+      className="feedback-pop shrink-0"
+      dir="rtl"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 10,
+        flexWrap: "wrap",
+        padding: "7px 16px",
+        background: result.isCorrect
+          ? "linear-gradient(135deg, rgba(6,78,59,0.97) 0%, rgba(4,50,40,0.97) 100%)"
+          : "linear-gradient(135deg, rgba(30,10,60,0.97) 0%, rgba(15,10,40,0.97) 100%)",
+        borderTop: `2px solid ${result.isCorrect ? "rgba(52,211,153,0.7)" : "rgba(75,85,99,0.6)"}`,
+        minHeight: 52,
+        pointerEvents: "none",
+      }}
+    >
+      {result.isCorrect ? (
+        <>
+          <span style={{ color: "#6ee7b7", fontWeight: 900, fontSize: 16 }}>💥 פגיעה!</span>
+          {result.bossDamageDealt > 0 && (
+            <span style={{ color: "#34d399", fontSize: 13, fontWeight: 800 }}>האויב נחלש −{result.bossDamageDealt}%</span>
+          )}
+          {result.megaHitAvailable ? (
+            <span style={{ color: "#c4b5fd", fontSize: 12, fontWeight: 900 }}>⚡ מכת קריסטל מוכנה!</span>
+          ) : energyBefore < ENERGY_MAX ? (
+            <span style={{ color: "#a78bfa", fontSize: 12 }}>⚡ כוח נטען</span>
+          ) : null}
+        </>
+      ) : (
+        <>
+          <span style={{ color: "#fcd34d", fontWeight: 900, fontSize: 15 }}>🛡️ נסה שוב!</span>
+          <span style={{ color: "#9ca3af", fontSize: 12, fontWeight: 700 }}>
+            התשובה: {result.correctAnswer}. {result.correctText}
+          </span>
+        </>
+      )}
     </div>
   );
 }
@@ -2893,11 +2903,6 @@ function ArenaPageContent() {
           </div>
         )}
 
-        {/* ── Feedback overlay ── */}
-        {phase === "feedback" && feedback && (
-          <FeedbackOverlay result={feedback} energyBefore={feedbackEnergyBefore} />
-        )}
-
         {/* ── Mega button — beside hero feet (right side, or left if near right edge) ── */}
         {(phase === "battle" || phase === "megahit") && (() => {
           const megaReady = energy >= ENERGY_MAX && phase === "battle" && !isPending;
@@ -2958,83 +2963,66 @@ function ArenaPageContent() {
         )}
         {/* ירי button hidden — arena tap-to-shoot replaces it; handleFireCrystal logic unchanged */}
 
-        {/* ── Challenge battle panel — anchored to TOP of arena, never covers Miti (bottom) or enemy ── */}
-        {phase === "challenge" && q && (
-          <div
-            style={{
-              position: "absolute",
-              top: "3%",
-              left: "50%",
-              transform: "translateX(-50%)",
-              zIndex: 30,
-              width: "min(340px, 88vw)",
-              pointerEvents: "none",
-            }}
-          >
-            <style>{`
-              @keyframes challenge-pop {
-                0%   { transform: scale(0.55) translateY(-16px); opacity: 0; }
-                60%  { transform: scale(1.06) translateY(3px);   opacity: 1; }
-                80%  { transform: scale(0.97) translateY(-1px);  opacity: 1; }
-                100% { transform: scale(1)   translateY(0px);   opacity: 1; }
-              }
-              .challenge-pop { animation: challenge-pop 0.38s cubic-bezier(0.34,1.56,0.64,1) both; }
-            `}</style>
-            <div
-              className="challenge-pop pointer-events-auto"
-              dir="rtl"
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 6,
-                borderRadius: 18,
-                padding: "8px 10px 10px",
-                background: "linear-gradient(160deg, #1e0a3c 0%, #0f0a2a 100%)",
-                border: "2px solid rgba(139,92,246,0.60)",
-                boxShadow: "0 0 0 1px rgba(34,211,238,0.20), 0 8px 40px rgba(0,0,0,0.80), 0 0 32px rgba(139,92,246,0.40)",
-              }}
-            >
-              {/* Header */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
-                <span style={{ fontSize: 18 }}>💎</span>
-                <span style={{ color: "#c4b5fd", fontWeight: 900, fontSize: 14 }}>ירי קריסטל!</span>
-                <span style={{ fontSize: 18 }}>💎</span>
-              </div>
-              {/* Question */}
-              <div style={{
-                background: "linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 100%)",
-                borderRadius: 10,
-                border: "1px solid rgba(255,255,255,0.10)",
-                padding: "7px 10px",
-              }}>
-                <p style={{
-                  color: "white", fontSize: 14, fontWeight: 700,
-                  textAlign: "center", lineHeight: 1.4, margin: 0,
-                }}>
-                  {q.text_he}
-                </p>
-              </div>
-              {/* Answer grid */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
-                {ANSWER_KEYS.map(key => (
-                  <AnswerButton
-                    key={key}
-                    answerKey={key}
-                    text={optionText(q, key)}
-                    onClick={() => handleAnswer(key)}
-                    disabled={isPending}
-                    state={
-                      lastAnswer === key
-                        ? (feedback?.isCorrect ? "correct" : "wrong")
-                        : "idle"
-                    }
-                  />
-                ))}
-              </div>
+      </section>
+
+      {/* ── Challenge panel — BELOW arena, never covers battle ── */}
+      {phase === "challenge" && q && (
+        <div
+          dir="rtl"
+          style={{
+            flexShrink: 0,
+            padding: "6px 10px 8px",
+            background: "linear-gradient(160deg, #1e0a3c 0%, #0f0a2a 100%)",
+            borderTop: "2px solid rgba(139,92,246,0.55)",
+            boxShadow: "0 -4px 24px rgba(0,0,0,0.55)",
+          }}
+        >
+          <style>{`
+            @keyframes challenge-pop {
+              0%   { transform: scale(0.92) translateY(10px); opacity: 0; }
+              60%  { transform: scale(1.03) translateY(-2px); opacity: 1; }
+              100% { transform: scale(1)   translateY(0px);  opacity: 1; }
+            }
+            .challenge-pop { animation: challenge-pop 0.30s cubic-bezier(0.34,1.56,0.64,1) both; }
+          `}</style>
+          <div className="challenge-pop" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {/* Header + Question */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8,
+              background: "rgba(255,255,255,0.05)", borderRadius: 10,
+              border: "1px solid rgba(255,255,255,0.09)", padding: "6px 10px",
+            }}>
+              <span style={{ fontSize: 16 }}>💎</span>
+              <p style={{ color: "white", fontSize: 14, fontWeight: 700, lineHeight: 1.35, margin: 0, flex: 1, textAlign: "center" }}>
+                {q.text_he}
+              </p>
+              <span style={{ fontSize: 16 }}>💎</span>
+            </div>
+            {/* Answer grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
+              {ANSWER_KEYS.map(key => (
+                <AnswerButton
+                  key={key}
+                  answerKey={key}
+                  text={optionText(q, key)}
+                  onClick={() => handleAnswer(key)}
+                  disabled={isPending}
+                  state={
+                    lastAnswer === key
+                      ? (feedback?.isCorrect ? "correct" : "wrong")
+                      : "idle"
+                  }
+                />
+              ))}
             </div>
           </div>
-        )}
-      </section>
+        </div>
+      )}
+
+      {/* ── Feedback bar — BELOW arena, compact, never covers battle ── */}
+      {phase === "feedback" && feedback && (
+        <FeedbackOverlay result={feedback} energyBefore={feedbackEnergyBefore} />
+      )}
 
     </main>
   );
