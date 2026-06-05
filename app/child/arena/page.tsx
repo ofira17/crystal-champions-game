@@ -1671,75 +1671,92 @@ function ArenaPageContent() {
     setPhase("shooting");
 
     startTransition(async () => {
-      const res = await submitAnswer(sessionRef.current, q.id, key);
-      if (!res.success) { setErrMsg(res.error); setPhase("error"); return; }
+      const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+
+      // Fire server call immediately — do NOT block the visual on the response.
+      // submitPromise resolves during the projectile travel window (~470 ms budget).
+      const submitPromise = submitAnswer(sessionRef.current, q.id, key);
+
+      // ── Arcade attack animation — starts immediately on click ─────────────
+
+      // Optimistic streak for projectile colour (gold at 3+).
+      // Corrected to 0 below if the server says wrong.
+      const optimisticStreak = correctStreak + 1;
+      setStrongShot(optimisticStreak >= 3);
+
+      // 1. Aim line flashes briefly
+      setShowAimLine(true);
+      await wait(80);
+      setShowAimLine(false);
+
+      // 2. Hero dashes toward enemy
+      setHeroAnim("dash");
+      await wait(130);
+
+      // 3. Hero recoils — projectile launches simultaneously.
+      // Hero faces the enemy: mirror sprite based on enemy-x vs hero-x.
+      setHeroAnim("recoil");
+      if (arenaRef.current) {
+        const aw = arenaRef.current.offsetWidth;
+        const ah = arenaRef.current.offsetHeight;
+        const facingRight = enemyStateRef.current.x >= heroPosRef.current.x;
+        // Origin: Miti's attack hand — right side when facing right, left side when facing left
+        const handOffsetX = facingRight ? 52 : -52;
+        const hxPx = (heroPosRef.current.x / 100) * aw + handOffsetX;
+        const hyPx = (heroPosRef.current.y / 100) * ah + 68; // chest/shoulder height
+        // Target: locked enemy center
+        const exPx = (enemyStateRef.current.x / 100) * aw;
+        const eyPx = (enemyStateRef.current.y / 100) * ah;
+        const dxAbs = exPx - hxPx;
+        const dyAbs = eyPx - hyPx;
+        heroFacingLeftRef.current = !facingRight;
+        setHeroFacingLeft(!facingRight);
+        // bottom-% origin so projectile is placed at Miti's attack hand
+        setProjectileOriginX((hxPx / aw) * 100);
+        setProjectileOriginY(((ah - hyPx) / ah) * 100);
+        // drift (X) and travel (Y) follow the beam vector exactly
+        setProjectileDriftPx(Math.round(dxAbs));
+        setProjectileTravelPx(Math.round(-dyAbs));
+      }
+      setShowProjectile(true);
+      setProjectileHit(true);
+      await wait(160);
+      setHeroAnim("idle");
+
+      // 4. Projectile travels — await server response during this window.
+      // Promise.all ensures we wait at least 310 ms AND for the server result.
+      const [res] = await Promise.all([submitPromise, wait(310)]);
+
+      if (!res.success) {
+        setShowProjectile(false);
+        setShowAimLine(false);
+        setStrongShot(false);
+        setErrMsg(res.error);
+        setPhase("error");
+        return;
+      }
 
       const didHit = res.isCorrect;
       setShootResult(didHit ? "hit" : "miss");
       reactMinionsToShot(didHit);
 
-      // ── Arcade attack animation — driven entirely by server result ────────
-      const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+      // Pre-compute enemy anchor (used by both hit and miss branches)
+      if (enemyRef.current && arenaRef.current) {
+        const er = enemyRef.current.getBoundingClientRect();
+        const ar = arenaRef.current.getBoundingClientRect();
+        setEnemyAnchor({
+          top:  er.top  + er.height / 2 - ar.top,
+          left: er.left + er.width  / 2 - ar.left,
+        });
+      }
 
       if (didHit) {
-        // Streak bookkeeping — strong (gold) diamond at 3+ correct in a row.
-        const nextStreak = correctStreak + 1;
-        const isStrong = nextStreak >= 3;
-        setCorrectStreak(nextStreak);
-        setStrongShot(isStrong);
-
-        // 1. Aim line flashes briefly
-        setShowAimLine(true);
-        await wait(80);
-        setShowAimLine(false);
-
-        // 2. Hero dashes toward enemy
-        setHeroAnim("dash");
-        await wait(130);
-
-        // 3. Hero recoils — projectile launches simultaneously.
-        // Hero faces the enemy: mirror sprite based on enemy-x vs hero-x.
-        setHeroAnim("recoil");
-        if (arenaRef.current) {
-          const aw = arenaRef.current.offsetWidth;
-          const ah = arenaRef.current.offsetHeight;
-          const facingRight = enemyStateRef.current.x >= heroPosRef.current.x;
-          // Origin: Miti's attack hand — right side when facing right, left side when facing left
-          const handOffsetX = facingRight ? 52 : -52;
-          const hxPx = (heroPosRef.current.x / 100) * aw + handOffsetX;
-          const hyPx = (heroPosRef.current.y / 100) * ah + 68; // chest/shoulder height
-          // Target: locked enemy center
-          const exPx = (enemyStateRef.current.x / 100) * aw;
-          const eyPx = (enemyStateRef.current.y / 100) * ah;
-          const dxAbs = exPx - hxPx;
-          const dyAbs = eyPx - hyPx;
-          heroFacingLeftRef.current = !facingRight;
-          setHeroFacingLeft(!facingRight);
-          // bottom-% origin so projectile is placed at Miti's attack hand
-          setProjectileOriginX((hxPx / aw) * 100);
-          setProjectileOriginY(((ah - hyPx) / ah) * 100);
-          // drift (X) and travel (Y) follow the beam vector exactly
-          setProjectileDriftPx(Math.round(dxAbs));
-          setProjectileTravelPx(Math.round(-dyAbs));
-        }
-        setShowProjectile(true);
-        setProjectileHit(true);
-        await wait(160);
-        setHeroAnim("idle");
-
-        // 4. Projectile travels upward
-        await wait(310);
+        // Confirm streak bookkeeping now that server validated the answer.
+        setCorrectStreak(optimisticStreak);
+        // strongShot was already set optimistically above — no change needed.
 
         // 5. Impact: burst particles, enemy flash, enemy shake, optional arena shake
         setShowProjectile(false);
-        if (enemyRef.current && arenaRef.current) {
-          const er = enemyRef.current.getBoundingClientRect();
-          const ar = arenaRef.current.getBoundingClientRect();
-          setEnemyAnchor({
-            top:  er.top  + er.height / 2 - ar.top,
-            left: er.left + er.width  / 2 - ar.left,
-          });
-        }
         setImpactBurst(true);
         playSound("correct");
         playSound("impact");
@@ -1760,20 +1777,12 @@ function ArenaPageContent() {
         setEnemyShake(false);
 
       } else {
-        // Wrong answer — no projectile, no strong shot; enemy blocks with shield.
+        // Wrong answer — projectile vanishes, enemy blocks with shield.
         setCorrectStreak(0);
         setStrongShot(false);
+        setShowProjectile(false);
         setHeroAnim("recoil");
         playSound("wrong");
-        // Shield-block reaction at enemy center
-        if (enemyRef.current && arenaRef.current) {
-          const er = enemyRef.current.getBoundingClientRect();
-          const ar = arenaRef.current.getBoundingClientRect();
-          setEnemyAnchor({
-            top:  er.top  + er.height / 2 - ar.top,
-            left: er.left + er.width  / 2 - ar.left,
-          });
-        }
         setShieldBlock(true);
         await wait(200);
         setHeroAnim("idle");

@@ -132,6 +132,14 @@ Arena: `app/child/arena/page.tsx`
 - Same origin as beam (attack hand, not sprite center)
 - `projectileDriftPx` and `projectileTravelPx` follow exact beam vector to enemy center
 
+## Answer Visual Feedback Rule (CANONICAL — DO NOT revert)
+
+**Correct-answer visual feedback must start immediately and must not wait for server round-trip.**
+
+In `handleAnswer()` (`app/child/arena/page.tsx`): fire `submitAnswer()` without awaiting, then immediately begin the aim-line → dash → recoil → projectile-launch sequence. Await the server result using `Promise.all([submitPromise, wait(310)])` during the projectile travel window, then branch on hit/miss for the impact phase. This ensures Miti's attack animation starts on the frame the user taps, with zero server-latency delay.
+
+If `submitAnswer()` fails, abort with `setPhase("error")` and clean up visual state. Wrong-answer branch is unchanged in outcome — projectile disappears, shield block shows.
+
 ## Deployment Rule
 
 Production deploys **only** from the `canonical` remote (`ofira17/crystal-champions-game`).
