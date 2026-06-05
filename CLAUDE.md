@@ -161,6 +161,15 @@ Vercel may cache a prior build or be mid-deploy. To confirm a change is live, fe
 - **Do NOT use Lovable** — Lovable is preview-only and not the source of truth.
 - The root URL (`/`) redirects to `/child/arena`, which then redirects to `/auth/login` for unauthenticated users. This is correct behavior — "Create Next App" in the title is a metadata issue, NOT a broken deployment.
 
+## Question/Feedback UI Rule (CANONICAL — DO NOT move back into arena)
+
+The question panel and feedback bar are rendered **BELOW** the arena `<section>`, as siblings in the main flex column — NOT inside the arena section as absolutely-positioned overlays.
+
+- **Challenge panel** (`phase === "challenge"`): renders below `</section>` — shows question text + 2×2 answer grid. Never uses `position: absolute`.
+- **FeedbackOverlay** (`phase === "feedback"`): renders below `</section>` — compact bar with hit/miss + damage info. Never uses `position: absolute`.
+
+**Root cause fixed (2026-06-05):** Both were `position: absolute` inside the arena, covering Miti, the enemy, and the crystal beam during battle.
+
 ## Deployment Status (as of 2026-06-05)
 
 - **Correct production deployment is live** from `C:\Users\97253\Desktop\קלוד\crystal-champions`
