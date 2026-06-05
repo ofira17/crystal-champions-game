@@ -89,11 +89,16 @@ export function CrystalEnemy({
   const flipX = 1;
 
   const lowHp = hp <= 30;
+  // drop-shadow follows the PNG alpha channel → glow hugs the sprite body outline
   const dropShadow = damaged
     ? "drop-shadow(0 0 22px rgba(255,60,60,0.95)) drop-shadow(0 0 8px white)"
     : lowHp
     ? `drop-shadow(0 0 14px rgba(255,80,80,0.7)) drop-shadow(0 0 20px ${meta.glow})`
     : `drop-shadow(0 0 18px ${meta.glow}) drop-shadow(0 2px 6px rgba(0,0,0,0.55))`;
+
+  // Yellow body-outline glow applied directly to the sprite so it follows the PNG silhouette
+  const yellowGlow =
+    "drop-shadow(0 0 8px rgba(255,240,60,0.95)) drop-shadow(0 0 18px rgba(255,210,30,0.75)) drop-shadow(0 0 30px rgba(255,190,0,0.50))";
 
   const bob = Math.sin(animPhase * Math.PI * 2) * 4;
 
@@ -153,16 +158,6 @@ export function CrystalEnemy({
             }} />
           </>
         )}
-        {/* Yellow aura behind sprite */}
-        <div style={{
-          position: "absolute",
-          inset: "-30%",
-          borderRadius: "50%",
-          background: "radial-gradient(ellipse at center, rgba(255,240,100,0.70) 0%, rgba(255,210,50,0.50) 35%, rgba(255,190,30,0.25) 60%, transparent 80%)",
-          boxShadow: "0 0 48px 16px rgba(255,220,60,0.75), 0 0 24px 8px rgba(255,200,40,0.60), inset 0 0 20px rgba(255,240,120,0.30)",
-          pointerEvents: "none",
-          zIndex: 0,
-        }} />
         <img
           src={src}
           alt={meta.nameHe}
@@ -174,7 +169,8 @@ export function CrystalEnemy({
             height: "100%",
             objectFit: "contain",
             transform: `perspective(300px) rotateY(${rotateY}deg) translateY(${bob}px) scaleX(${flipX})`,
-            willChange: "transform",
+            filter: yellowGlow,
+            willChange: "transform, filter",
             userSelect: "none",
             pointerEvents: "none",
           }}

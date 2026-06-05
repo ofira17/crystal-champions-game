@@ -91,7 +91,7 @@ C:\Users\97253\Desktop\קלוד\crystal-champions\.claude\settings.local.json
 
 ## Enemy Yellow Aura (CANONICAL — DO NOT remove)
 
-A clearly visible yellow radial glow is rendered behind every enemy sprite via an absolute-positioned `div` inside the size container in `CrystalEnemy.tsx`. It uses `inset: "-30%"` so the aura scales proportionally with the sprite at all HP sizes and is clearly visible. The aura uses high-opacity gradient (center 0.70, mid 0.50, outer 0.25) and strong box-shadow (48px/16px/0.75). The aura sits at `zIndex: 0`; the `<img>` sits at `zIndex: 1`. Do not remove, suppress, or reduce the opacity of this aura.
+The yellow aura is applied as CSS `filter: drop-shadow(...)` directly on the `<img>` element in `CrystalEnemy.tsx`. Three stacked drop-shadows (8px/18px/30px) at yellow RGBA values create a glow that follows the PNG alpha channel — hugging the sprite's body silhouette. Do NOT use a radial-gradient circle div; that creates a circular halo unrelated to the sprite shape. Do not remove or suppress the yellowGlow filter on the img.
 
 ## Miti Size Rule
 
