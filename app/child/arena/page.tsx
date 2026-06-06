@@ -2640,7 +2640,7 @@ function ArenaPageContent() {
                 : enemyHit === "flash"
                 ? "brightness(2.6) saturate(0.2) drop-shadow(0 0 14px white)"
                 : enemyHit === "tint"
-                ? "brightness(1.4) sepia(1) saturate(3) hue-rotate(300deg)"
+                ? "brightness(1.35) saturate(2) hue-rotate(200deg)"
                 : "none",
               transition: enemyDissolving ? "none" : "filter 0.15s ease",
             }}
@@ -2652,7 +2652,7 @@ function ArenaPageContent() {
               background: "rgba(0,0,0,0.45)",
               borderRadius: 8,
               padding: "3px 7px",
-              border: `1px solid ${bossHp <= 30 ? "rgba(250,204,21,0.45)" : "rgba(248,113,113,0.35)"}`,
+              border: `1px solid ${bossHp <= 30 ? "rgba(192,132,252,0.55)" : "rgba(248,113,113,0.35)"}`,
             }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
                 <span style={{ color: "rgba(251,113,133,0.85)", fontSize: 8, fontWeight: 700 }}>
@@ -2660,7 +2660,7 @@ function ArenaPageContent() {
                 </span>
                 <span style={{
                   fontSize: 9, fontWeight: 800,
-                  color: bossHp <= 30 ? "#facc15" : "rgba(251,113,133,0.95)",
+                  color: bossHp <= 30 ? "#c084fc" : "rgba(251,113,133,0.95)",
                 }}>
                   {bossHp}%
                 </span>
@@ -2671,8 +2671,8 @@ function ArenaPageContent() {
                   background: bossHp > 60
                     ? "linear-gradient(90deg,#ef4444,#f87171)"
                     : bossHp > 30
-                    ? "linear-gradient(90deg,#f97316,#fbbf24)"
-                    : "linear-gradient(90deg,#facc15,#ef4444)",
+                    ? "linear-gradient(90deg,#a855f7,#c084fc)"
+                    : "linear-gradient(90deg,#7c3aed,#ef4444)",
                   transition: "width 0.4s ease-out",
                 }} />
               </div>

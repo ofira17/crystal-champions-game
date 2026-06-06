@@ -92,7 +92,7 @@ async function getChildProfile() {
 
   const { data: child } = await supabase
     .from("child_profiles")
-    .select("id, energy, current_world_id, total_coins, total_stars")
+    .select("id, energy, current_world_id, total_coins, total_stars, grade_level")
     .eq("user_id", user.id)
     .single();
 
@@ -342,11 +342,41 @@ export async function startArenaSession(
 
   const admin = createAdminClient();
 
-  // ── Determine mission source ──────────────────────────────────────────────────
-  // hero_training / world_mysteries: no child_missions row — go straight to auto-questions.
-  // All other IDs: validate against child_missions (admin bypasses RLS).
   const isAutoMode = AUTO_MISSION_SENTINELS.has(missionId);
 
+  // ── Round 1: parallel — mission validation + world fallback + grade config ────
+  // These three are fully independent of each other after we have child.id.
+  const [missionResult, worldFallbackResult, cfgResult] = await Promise.all([
+    isAutoMode
+      ? Promise.resolve({ data: null as null })
+      : admin
+          .from("child_missions")
+          .select("id, title_he, story_text_he, practice_set_id, selection_strategy, questions_per_run")
+          .eq("id", missionId)
+          .eq("child_id", child.id)
+          .eq("status", "active")
+          .single()
+          .then(r => r),
+    child.current_world_id
+      ? Promise.resolve({ data: null as null })
+      : supabase
+          .from("world_progress")
+          .select("world_id")
+          .eq("child_id", child.id)
+          .eq("is_unlocked", true)
+          .order("world_id")
+          .limit(1)
+          .maybeSingle()
+          .then(r => r),
+    admin
+      .from("child_mission_config")
+      .select("grade_level")
+      .eq("child_profile_id", child.id)
+      .maybeSingle()
+      .then(r => r),
+  ]);
+
+  // ── Validate mission (non-auto mode) ──────────────────────────────────────────
   let missionDbId:            string | null = null;
   let missionTitleHe:         string        = missionId === "world_mysteries" ? "תעלומות עולם" : "אימון גיבורים";
   let missionStoryTextHe:     string | null = null;
@@ -354,16 +384,8 @@ export async function startArenaSession(
   let missionQuestionsPerRun: number        = 10;
 
   if (!isAutoMode) {
-    const { data: mission } = await admin
-      .from("child_missions")
-      .select("id, title_he, story_text_he, practice_set_id, selection_strategy, questions_per_run")
-      .eq("id", missionId)
-      .eq("child_id", child.id)
-      .eq("status", "active")
-      .single();
-
+    const mission = (missionResult as { data: { id: string; title_he: string; story_text_he: string | null; practice_set_id: string; selection_strategy: string; questions_per_run: number } | null }).data;
     if (!mission) return { success: false, error: "הרפתקה לא נמצאה או אינה פעילה" };
-
     missionDbId              = mission.id;
     missionTitleHe           = mission.title_he;
     missionStoryTextHe       = mission.story_text_he ?? null;
@@ -371,46 +393,61 @@ export async function startArenaSession(
     missionQuestionsPerRun   = mission.questions_per_run;
   }
 
-  // Determine world
-  let worldId: string | null = child.current_world_id ?? null;
-  if (!worldId) {
-    const { data: wp } = await supabase
-      .from("world_progress")
-      .select("world_id")
-      .eq("child_id", child.id)
-      .eq("is_unlocked", true)
-      .order("world_id")
-      .limit(1)
-      .maybeSingle();
-    worldId = wp?.world_id ?? null;
+  // ── Resolve worldId ────────────────────────────────────────────────────────────
+  const worldId: string | null =
+    child.current_world_id ??
+    (worldFallbackResult as { data: { world_id: string } | null }).data?.world_id ??
+    null;
+
+  // ── Resolve grade from config → profile column → safe default ─────────────────
+  let grade = 3;
+  const cfgGrade = (cfgResult as { data: { grade_level: number } | null }).data?.grade_level;
+  if (typeof cfgGrade === "number" && cfgGrade >= 1 && cfgGrade <= 6) {
+    grade = cfgGrade;
+  } else {
+    // grade_level is now included in child profile (see getChildProfile select)
+    const parsed = Number.parseInt(String((child as { grade_level?: unknown }).grade_level ?? ""), 10);
+    if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 6) grade = parsed;
   }
 
-  // Get boss HP — if boss is already defeated (hp=0), reset for new cycle
-  let currentBossHp = 100;
-  if (worldId) {
-    const { data: wp } = await supabase
-      .from("world_progress")
-      .select("boss_hp_remaining, is_unlocked, is_completed")
-      .eq("child_id", child.id)
-      .eq("world_id", worldId)
-      .single();
+  // ── Round 2: parallel — boss HP + hero ID ─────────────────────────────────────
+  // These depend on worldId (derived above) but are independent of each other.
+  const [bossHpResult, heroIdResult] = await Promise.all([
+    worldId
+      ? supabase
+          .from("world_progress")
+          .select("boss_hp_remaining, is_unlocked, is_completed")
+          .eq("child_id", child.id)
+          .eq("world_id", worldId)
+          .single()
+      : Promise.resolve({ data: null as null }),
+    admin
+      .from("child_profiles")
+      .select("current_hero_id")
+      .eq("id", child.id)
+      .single(),
+  ]);
 
-    if (wp?.is_unlocked) {
-      if (wp.is_completed && wp.boss_hp_remaining === 0) {
-        await admin.rpc("reset_boss", { p_child_id: child.id, p_world_id: worldId });
-        currentBossHp = 100;
-      } else {
-        currentBossHp = wp.boss_hp_remaining;
-      }
+  // ── Compute boss HP ────────────────────────────────────────────────────────────
+  let currentBossHp = 100;
+  const bossWp = (bossHpResult as { data: { boss_hp_remaining: number; is_unlocked: boolean; is_completed: boolean } | null }).data;
+  if (bossWp?.is_unlocked) {
+    if (bossWp.is_completed && bossWp.boss_hp_remaining === 0) {
+      await admin.rpc("reset_boss", { p_child_id: child.id, p_world_id: worldId });
+      currentBossHp = 100;
+    } else {
+      currentBossHp = bossWp.boss_hp_remaining;
     }
   }
 
+  // ── Round 3: parallel — DB questions + auto-questions (if needed) + hero details ──
+  // Auto-question generation (OpenAI) starts immediately in parallel with hero fetch.
   let questions:     ArenaQuestion[] = [];
   let autoQuestions: AutoQuestion[]  = [];
   let questionIdsForSession: string[] = [];
 
+  // DB-backed mission: fetch questions first (sequential due to selectQuestionsForArena complexity).
   if (!isAutoMode && missionDbId) {
-    // ── DB-backed mission path ────────────────────────────────────────────────────
     const { data: missionFull } = await admin
       .from("child_missions")
       .select("practice_set_id")
@@ -438,32 +475,26 @@ export async function startArenaSession(
     }
   }
 
-  // Auto-questions: used for hero_training/world_mysteries mode AND as fallback
-  // when a DB-backed mission has no questions in its practice set.
-  if (questions.length === 0) {
-    let grade = 3;
-    const { data: cfg } = await admin
-      .from("child_mission_config")
-      .select("grade_level")
-      .eq("child_profile_id", child.id)
-      .maybeSingle();
-    if (typeof cfg?.grade_level === "number") {
-      grade = cfg.grade_level;
-    } else {
-      const { data: cp } = await admin
-        .from("child_profiles")
-        .select("grade_level")
-        .eq("id", child.id)
-        .maybeSingle();
-      const parsed = Number.parseInt(String(cp?.grade_level ?? ""), 10);
-      if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 6) grade = parsed;
-    }
+  // Auto-questions path: start OpenAI call in parallel with hero details fetch.
+  const needAutoQuestions = questions.length === 0;
+  const autoQuestionsPromise = needAutoQuestions
+    ? generateAutoArenaQuestions(grade, missionQuestionsPerRun)
+    : Promise.resolve([] as AutoQuestion[]);
 
-    autoQuestions = await generateAutoArenaQuestions(grade, missionQuestionsPerRun);
+  // Hero details fetch runs in parallel with OpenAI (if auto mode).
+  const heroId = (heroIdResult as { data: { current_hero_id: string | null } | null }).data?.current_hero_id ?? null;
+  const heroPromise = heroId
+    ? admin.from("heroes").select("name_he, gender, color_theme").eq("id", heroId).single()
+    : Promise.resolve({ data: null as null });
+
+  // Await both in parallel — OpenAI and hero fetch race each other.
+  const [resolvedAutoQuestions, heroResult] = await Promise.all([autoQuestionsPromise, heroPromise]);
+
+  if (needAutoQuestions) {
+    autoQuestions = resolvedAutoQuestions;
     if (autoQuestions.length === 0) {
       return { success: false, error: "אין שאלות זמינות להרפתקה" };
     }
-
     questions = autoQuestions.map(q => ({
       id:          q.id,
       text_he:     q.text_he,
@@ -479,7 +510,7 @@ export async function startArenaSession(
     return { success: false, error: "אין שאלות זמינות להרפתקה" };
   }
 
-  // Create game session (mission_id is nullable — null for hero_training/world_mysteries)
+  // ── Create game session ────────────────────────────────────────────────────────
   const { data: session } = await admin
     .from("game_sessions")
     .insert({
@@ -497,29 +528,16 @@ export async function startArenaSession(
 
   const bossDamagePerCorrect = Math.floor(100 / missionQuestionsPerRun);
 
-  // Fetch selected hero for arena display
+  // ── Hero display data (from parallel fetch above) ──────────────────────────────
   let heroName       = "הגיבור שלי";
   let heroGender: "M" | "F" = "M";
   let heroColorTheme = "default";
 
-  const { data: childProfile } = await admin
-    .from("child_profiles")
-    .select("current_hero_id")
-    .eq("id", child.id)
-    .single();
-
-  if (childProfile?.current_hero_id) {
-    const { data: hero } = await admin
-      .from("heroes")
-      .select("name_he, gender, color_theme")
-      .eq("id", childProfile.current_hero_id)
-      .single();
-
-    if (hero) {
-      heroName       = hero.name_he       ?? "הגיבור שלי";
-      heroGender     = (hero.gender as "M" | "F") ?? "M";
-      heroColorTheme = hero.color_theme   ?? "default";
-    }
+  const hero = (heroResult as { data: { name_he: string | null; gender: string | null; color_theme: string | null } | null }).data;
+  if (hero) {
+    heroName       = hero.name_he       ?? "הגיבור שלי";
+    heroGender     = (hero.gender as "M" | "F") ?? "M";
+    heroColorTheme = hero.color_theme   ?? "default";
   }
 
   return {
