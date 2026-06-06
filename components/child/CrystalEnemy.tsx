@@ -96,9 +96,9 @@ export function CrystalEnemy({
     ? `drop-shadow(0 0 14px rgba(255,80,80,0.7)) drop-shadow(0 0 20px ${meta.glow})`
     : `drop-shadow(0 0 18px ${meta.glow}) drop-shadow(0 2px 6px rgba(0,0,0,0.55))`;
 
-  // Yellow body-outline glow applied directly to the sprite so it follows the PNG silhouette
+  // White body-outline glow applied directly to the sprite so it follows the PNG silhouette
   const yellowGlow =
-    "drop-shadow(0 0 8px rgba(255,240,60,0.95)) drop-shadow(0 0 18px rgba(255,210,30,0.75)) drop-shadow(0 0 30px rgba(255,190,0,0.50))";
+    "drop-shadow(0 0 8px rgba(255,255,255,0.95)) drop-shadow(0 0 18px rgba(220,220,255,0.75)) drop-shadow(0 0 30px rgba(200,200,255,0.50))";
 
   const bob = Math.sin(animPhase * Math.PI * 2) * 4;
 
