@@ -93,6 +93,14 @@ C:\Users\97253\Desktop\קלוד\crystal-champions\.claude\settings.local.json
 
 The white aura is applied as CSS `filter: drop-shadow(...)` directly on the `<img>` element in `CrystalEnemy.tsx`. Three stacked drop-shadows (8px/18px/30px) at white/cool-white RGBA values create a semi-transparent glow that follows the PNG alpha channel — hugging the sprite's body silhouette. Do NOT use a radial-gradient circle div; that creates a circular halo unrelated to the sprite shape. Do not remove or suppress the yellowGlow filter on the img. (Variable is still named `yellowGlow` in code — color is white.)
 
+**VARIANT_META glow values MUST all be white/cool-white** — no orange, amber, gold, or warm colors. All four variants use rgba values in the 200-255 white/purple range:
+- goblin: `rgba(74,222,128,0.75)` (green — acceptable, not warm)
+- bat: `rgba(167,139,250,0.80)` (purple)
+- giant: `rgba(220,220,255,0.85)` (cool-white — was orange rgba(251,113,30) FIXED 2026-06-06)
+- wizard: `rgba(168,85,247,0.85)` (purple)
+
+The `meta.glow` value is also used in the `dropShadow` (idle and lowHp states) — any warm color there will appear as an orange aura around the enemy body.
+
 ## Miti Size Rule
 
 Miti must keep normal full size during arena staging and battle walking. Only the enemy uses HP-based shrinking.
