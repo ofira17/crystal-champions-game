@@ -89,9 +89,9 @@ C:\Users\97253\Desktop\קלוד\crystal-champions\.claude\settings.local.json
 
 **AI bounds rule:** In the arena page AI loop, `eSz` MUST be computed as `max(150, min(VAR_MAX, round(ah2 * 0.72)))` and halfH MUST include the HP bar offset (`eSz/2 + 17`). eyMin/eyMax must be guarded so eyMin < eyMax always.
 
-## Enemy Yellow Aura (CANONICAL — DO NOT remove)
+## Enemy White Aura (CANONICAL — DO NOT remove)
 
-The yellow aura is applied as CSS `filter: drop-shadow(...)` directly on the `<img>` element in `CrystalEnemy.tsx`. Three stacked drop-shadows (8px/18px/30px) at yellow RGBA values create a glow that follows the PNG alpha channel — hugging the sprite's body silhouette. Do NOT use a radial-gradient circle div; that creates a circular halo unrelated to the sprite shape. Do not remove or suppress the yellowGlow filter on the img.
+The white aura is applied as CSS `filter: drop-shadow(...)` directly on the `<img>` element in `CrystalEnemy.tsx`. Three stacked drop-shadows (8px/18px/30px) at white/cool-white RGBA values create a semi-transparent glow that follows the PNG alpha channel — hugging the sprite's body silhouette. Do NOT use a radial-gradient circle div; that creates a circular halo unrelated to the sprite shape. Do not remove or suppress the yellowGlow filter on the img. (Variable is still named `yellowGlow` in code — color is white.)
 
 ## Miti Size Rule
 
