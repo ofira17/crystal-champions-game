@@ -13,6 +13,7 @@ import { ENERGY_MAX, REGULAR_BOX_XP, BOSS_BOX_XP } from "@/lib/constants";
 import {
   generateAutoArenaQuestions,
   isAutoQuestionId,
+  isGrade1Safe,
   type AutoQuestion,
 } from "@/lib/auto-questions";
 
@@ -507,6 +508,20 @@ export async function startArenaSession(
 
   if (needAutoQuestions) {
     autoQuestions = resolvedAutoQuestions;
+
+    // Defense-in-depth: discard any grade-1 questions that slipped past generation-time checks
+    // (e.g. cached session auto_questions from before the fix, or future model drift).
+    if (grade === 1) {
+      const before = autoQuestions.length;
+      autoQuestions = autoQuestions.filter(q => isGrade1Safe(q.text_he));
+      const rejected = before - autoQuestions.length;
+      if (rejected > 0) {
+        console.warn(`[arena] grade=1 safety filter: discarded ${rejected} invalid question(s) — replacing with fallback`);
+        const { getFallbackQuestions } = await import("@/lib/fallback-questions");
+        autoQuestions = [...autoQuestions, ...getFallbackQuestions(1, rejected)];
+      }
+    }
+
     if (autoQuestions.length === 0) {
       return { success: false, error: "אין שאלות זמינות להרפתקה" };
     }

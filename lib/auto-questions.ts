@@ -12,14 +12,27 @@ import { getFallbackQuestions } from "@/lib/fallback-questions";
 
 // Hard-blocked keywords for grade 1 — any question containing these is rejected regardless of subject.
 const GRADE_1_HARD_BLOCK = [
-  "כפל", "חילוק", "מכפלה", "לכפול", "×", "÷", "מחולק",
-  "שבר", "מכנה", "מונה", "½", "¼", "⅓",
-  "אחוז", "%",
+  // multiplication — all surface forms
+  "כפל", "כפול", "כפלי", "מכפלה", "לכפול", "פעמים", "×", "*",
+  // division — all surface forms
+  "חילוק", "חלקי", "מחולק", "לחלק", "÷", "/",
+  // fractions / percentages
+  "שבר", "מכנה", "מונה", "½", "¼", "⅓", "אחוז", "%",
+  // science topics above grade 1
   "פוטוסינתזה", "כלורופיל",
+  // continents
   "יבשת", "יבשות", "אוסטרליה", "אנטרקטיקה", "אפריקה", "אמריקה", "אסיה", "אירופה",
+  // history topics
   "מהפכה", "מלחמה",
+  // grammar
   "דקדוק", "שורש", "בניין",
 ];
+
+/** Returns true if the question text is safe for grade 1 (no forbidden keywords). */
+export function isGrade1Safe(text: string): boolean {
+  const lower = text.toLowerCase();
+  return !GRADE_1_HARD_BLOCK.some(kw => lower.includes(kw.toLowerCase()));
+}
 
 export interface AutoQuestion {
   id:             string;   // synthetic — prefixed with "auto-"
@@ -171,10 +184,7 @@ ${subjectRules}
       ) continue;
 
       // Grade 1 hard block: reject any question containing a forbidden keyword anywhere in text.
-      if (grade === 1) {
-        const textLower = (q.text_he as string).toLowerCase();
-        if (GRADE_1_HARD_BLOCK.some(kw => textLower.includes(kw.toLowerCase()))) continue;
-      }
+      if (grade === 1 && !isGrade1Safe(q.text_he as string)) continue;
 
       // Reject math questions that violate grade-level rules
       const subjectLower = (q.subject_he as string).toLowerCase();
