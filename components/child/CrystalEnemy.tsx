@@ -141,9 +141,9 @@ export function CrystalEnemy({
               position: "absolute",
               inset: -14,
               borderRadius: "50%",
-              border: "2px solid rgba(255,220,80,0.75)",
-              boxShadow: "0 0 14px rgba(255,220,80,0.55), inset 0 0 18px rgba(255,220,80,0.18)",
-              background: "rgba(255,220,80,0.04)",
+              border: "2px solid rgba(220,235,255,0.75)",
+              boxShadow: "0 0 14px rgba(200,220,255,0.55), inset 0 0 18px rgba(220,235,255,0.18)",
+              background: "rgba(220,235,255,0.04)",
               animation: "target-lock-ring 1.1s ease-in-out infinite",
               pointerEvents: "none",
             }} />
@@ -152,7 +152,7 @@ export function CrystalEnemy({
               position: "absolute",
               inset: -26,
               borderRadius: "50%",
-              border: "1px dashed rgba(255,220,80,0.35)",
+              border: "1px dashed rgba(200,220,255,0.35)",
               animation: "target-lock-spin 4s linear infinite",
               pointerEvents: "none",
             }} />
