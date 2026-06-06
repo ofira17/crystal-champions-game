@@ -263,11 +263,21 @@ Grade is resolved in this priority order:
 
 `getChildProfile()` MUST include `grade_level` in its select list. Do not add a separate DB round-trip for grade_level.
 
-### Arena load performance — parallel query pattern (FIXED 2026-06-07)
+### Arena load performance — parallel query pattern + OpenAI timeout (FIXED 2026-06-07)
 `startArenaSession()` runs queries in three parallel rounds after `getChildProfile()`:
 - Round 1: mission row + world_id fallback + child_mission_config grade — all in `Promise.all`
 - Round 2: boss HP + hero_id — in `Promise.all`, depends only on worldId from round 1
 - Round 3: OpenAI question generation + hero details — start OpenAI immediately when grade is known, run hero details fetch in parallel. This cuts auto-mode load time by ~200ms vs sequential.
+
+**OpenAI timeout rule (CRITICAL — DO NOT REMOVE):**
+`generateAutoArenaQuestions()` in `lib/auto-questions.ts` races the OpenAI call against an 8-second timeout using `Promise.race()`. If OpenAI does not respond within 8 seconds, the function immediately returns pre-built grade-appropriate fallback questions from `lib/fallback-questions.ts`. This ensures the arena NEVER takes >~10 seconds to load, regardless of OpenAI latency.
+
+**Grade 1 hard-block rule (CRITICAL — DO NOT REMOVE):**
+After receiving AI questions, `generateAutoArenaQuestions()` applies an additional hard-block list for grade 1 (`GRADE_1_HARD_BLOCK` array) that rejects any question containing forbidden keywords (כפל, חילוק, שבר, אחוז, פוטוסינתזה, יבשת, מהפכה, מלחמה, etc.). Questions that fail this hard block are replaced by fallback questions from `lib/fallback-questions.ts`. Grade 1 must NEVER receive multiplication, division, fractions, percentages, photosynthesis, continents, abstract science/geography, or advanced vocabulary.
+
+**Fallback question bank:** `lib/fallback-questions.ts` — pre-built safe questions for grades 1-6. Grade 1 questions are addition/subtraction up to 20, basic Hebrew, animals, and everyday knowledge. Never modify grade 1 fallback to include forbidden topics.
+
+**Grade logging:** `startArenaSession()` logs `[arena] grade=N source=child_mission_config|child_profiles|default` to Vercel logs. Check these logs if grade 1 children receive wrong questions.
 
 ## Battle Visual Requirements
 

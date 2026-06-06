@@ -8,6 +8,18 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { buildMathGradeInstruction, validateMathQuestion } from "@/lib/math-grade-rules";
 import { buildAllSubjectsInstruction, validateSubjectQuestion } from "@/lib/grade-subject-rules";
+import { getFallbackQuestions } from "@/lib/fallback-questions";
+
+// Hard-blocked keywords for grade 1 — any question containing these is rejected regardless of subject.
+const GRADE_1_HARD_BLOCK = [
+  "כפל", "חילוק", "מכפלה", "לכפול", "×", "÷", "מחולק",
+  "שבר", "מכנה", "מונה", "½", "¼", "⅓",
+  "אחוז", "%",
+  "פוטוסינתזה", "כלורופיל",
+  "יבשת", "יבשות", "אוסטרליה", "אנטרקטיקה", "אפריקה", "אמריקה", "אסיה", "אירופה",
+  "מהפכה", "מלחמה",
+  "דקדוק", "שורש", "בניין",
+];
 
 export interface AutoQuestion {
   id:             string;   // synthetic — prefixed with "auto-"
@@ -116,16 +128,31 @@ ${subjectRules}
   ]
 }`;
 
+  const t0 = Date.now();
+  console.log(`[arena] generateAutoArenaQuestions grade=${grade} count=${n} — calling OpenAI`);
+
   try {
     const openai = await import("openai");
     const client = new openai.default({ apiKey: process.env.OPENAI_API_KEY });
 
-    const resp = await client.chat.completions.create({
+    // Hard 8-second timeout — if OpenAI is slow, fall through to fallback questions.
+    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000));
+    const apiPromise     = client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
       temperature: 0.8,
     });
+
+    const resp = await Promise.race([apiPromise, timeoutPromise]);
+
+    if (!resp) {
+      const elapsed = Date.now() - t0;
+      console.warn(`[arena] OpenAI timed out after ${elapsed}ms — serving grade ${grade} fallback questions`);
+      return getFallbackQuestions(grade, n);
+    }
+
+    console.log(`[arena] OpenAI responded in ${Date.now() - t0}ms`);
 
     const raw  = JSON.parse(resp.choices[0]?.message?.content ?? "{}");
     const arr  = Array.isArray(raw?.questions) ? raw.questions : [];
@@ -142,6 +169,12 @@ ${subjectRules}
         typeof q?.subject_he     !== "string" ||
         !isAnswerLetter(q?.correct_answer)
       ) continue;
+
+      // Grade 1 hard block: reject any question containing a forbidden keyword anywhere in text.
+      if (grade === 1) {
+        const textLower = (q.text_he as string).toLowerCase();
+        if (GRADE_1_HARD_BLOCK.some(kw => textLower.includes(kw.toLowerCase()))) continue;
+      }
 
       // Reject math questions that violate grade-level rules
       const subjectLower = (q.subject_he as string).toLowerCase();
@@ -166,9 +199,22 @@ ${subjectRules}
       });
     }
 
-    return out.slice(0, n);
-  } catch {
-    return [];
+    const passed = out.slice(0, n);
+    console.log(`[arena] AI questions: ${arr.length} raw → ${out.length} passed validation → ${passed.length} serving`);
+
+    // If too many were rejected (< 50% survived), supplement with fallback to hit count.
+    if (passed.length < n) {
+      const needed = n - passed.length;
+      console.warn(`[arena] Only ${passed.length}/${n} AI questions passed — adding ${needed} fallback questions`);
+      const fallback = getFallbackQuestions(grade, needed);
+      return [...passed, ...fallback];
+    }
+
+    return passed;
+  } catch (err) {
+    const elapsed = Date.now() - t0;
+    console.error(`[arena] OpenAI error after ${elapsed}ms:`, err);
+    return getFallbackQuestions(grade, n);
   }
 }
 

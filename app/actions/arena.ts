@@ -343,6 +343,8 @@ export async function startArenaSession(
   const admin = createAdminClient();
 
   const isAutoMode = AUTO_MISSION_SENTINELS.has(missionId);
+  const t0 = Date.now();
+  console.log(`[arena] startArenaSession childId=${child.id} missionId=${missionId} autoMode=${isAutoMode}`);
 
   // ── Round 1: parallel — mission validation + world fallback + grade config ────
   // These three are fully independent of each other after we have child.id.
@@ -399,18 +401,27 @@ export async function startArenaSession(
     (worldFallbackResult as { data: { world_id: string } | null }).data?.world_id ??
     null;
 
+  console.log(`[arena] Round1 done in ${Date.now() - t0}ms`);
+
   // ── Resolve grade from config → profile column → safe default ─────────────────
   let grade = 3;
+  let gradeSource = "default";
   const cfgGrade = (cfgResult as { data: { grade_level: number } | null }).data?.grade_level;
   if (typeof cfgGrade === "number" && cfgGrade >= 1 && cfgGrade <= 6) {
     grade = cfgGrade;
+    gradeSource = "child_mission_config";
   } else {
     // grade_level is now included in child profile (see getChildProfile select)
     const parsed = Number.parseInt(String((child as { grade_level?: unknown }).grade_level ?? ""), 10);
-    if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 6) grade = parsed;
+    if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 6) {
+      grade = parsed;
+      gradeSource = "child_profiles";
+    }
   }
+  console.log(`[arena] grade=${grade} source=${gradeSource} cfgGrade=${cfgGrade} profileGrade=${(child as { grade_level?: unknown }).grade_level}`);
 
   // ── Round 2: parallel — boss HP + hero ID ─────────────────────────────────────
+  const t1 = Date.now();
   // These depend on worldId (derived above) but are independent of each other.
   const [bossHpResult, heroIdResult] = await Promise.all([
     worldId
@@ -439,6 +450,8 @@ export async function startArenaSession(
       currentBossHp = bossWp.boss_hp_remaining;
     }
   }
+
+  console.log(`[arena] Round2 done in ${Date.now() - t1}ms (boss HP + hero ID)`);
 
   // ── Round 3: parallel — DB questions + auto-questions (if needed) + hero details ──
   // Auto-question generation (OpenAI) starts immediately in parallel with hero fetch.
@@ -487,8 +500,10 @@ export async function startArenaSession(
     ? admin.from("heroes").select("name_he, gender, color_theme").eq("id", heroId).single()
     : Promise.resolve({ data: null as null });
 
+  const t2 = Date.now();
   // Await both in parallel — OpenAI and hero fetch race each other.
   const [resolvedAutoQuestions, heroResult] = await Promise.all([autoQuestionsPromise, heroPromise]);
+  console.log(`[arena] Round3 done in ${Date.now() - t2}ms (questions + hero details). Total so far: ${Date.now() - t0}ms`);
 
   if (needAutoQuestions) {
     autoQuestions = resolvedAutoQuestions;
@@ -539,6 +554,8 @@ export async function startArenaSession(
     heroGender     = (hero.gender as "M" | "F") ?? "M";
     heroColorTheme = hero.color_theme   ?? "default";
   }
+
+  console.log(`[arena] startArenaSession complete in ${Date.now() - t0}ms — ${questions.length} questions, grade=${grade}`);
 
   return {
     success:            true,
