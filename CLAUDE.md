@@ -103,6 +103,10 @@ The `meta.glow` value is also used in the `dropShadow` (idle and lowHp states) �
 
 **Target lock ring** (shown during battle/challenge phases, `locked=true`): uses CSS `border` + `box-shadow` on absolute-positioned divs. MUST use cool-white `rgba(220,235,255,...)` / `rgba(200,220,255,...)` — never `rgba(255,220,80,...)` or any warm yellow/gold (was FIXED 2026-06-06, was the root cause of persistent orange aura in production).
 
+**enemyHit "tint" filter** (arena/page.tsx, applied for 200ms after correct answer): MUST use `"brightness(1.35) saturate(2) hue-rotate(200deg)"` — no `sepia()` which creates warm orange/yellow. Previous `sepia(1) saturate(3) hue-rotate(300deg)` caused orange/yellow flash visible in production (FIXED 2026-06-07).
+
+**Enemy HP bar colors** (arena/page.tsx, above enemy sprite): HP 30-60% fill MUST be purple (`#a855f7,#c084fc`) — never orange (#f97316) or yellow (#fbbf24). HP <30% fill MUST be purple-red (`#7c3aed,#ef4444`). HP <30% border/text MUST be violet (`rgba(192,132,252,0.55)` / `#c084fc`) — not yellow (#facc15) (FIXED 2026-06-07).
+
 ## Miti Size Rule
 
 Miti must keep normal full size during arena staging and battle walking. Only the enemy uses HP-based shrinking.
@@ -188,12 +192,13 @@ The question panel and feedback bar are rendered **BELOW** the arena `<section>`
 
 **Root cause fixed (2026-06-05):** Both were `position: absolute` inside the arena, covering Miti, the enemy, and the crystal beam during battle.
 
-## Deployment Status (as of 2026-06-05)
+## Deployment Status (as of 2026-06-07)
 
 - **Correct production deployment is live** from `C:\Users\97253\Desktop\קלוד\crystal-champions`
 - **Production URL:** https://crystal-champions-game.vercel.app
-- **Live commit:** 463c697
-- **Last deploy:** manual redeploy via `vercel redeploy` — GitHub push did not auto-trigger Vercel
+- **Live commit:** 84a1102
+- **Live deployment:** dpl_2SH4iXw7FdKFqsdyL6a2oSGV5due (crystal-champions-game-hi8ihnr3n)
+- **Last deploy:** `vercel --prod` — GitHub push did not auto-trigger Vercel (use `vercel --prod` manually)
 
 ## Recovery: GitHub push did not trigger Vercel
 
@@ -249,6 +254,20 @@ Then verify production chunks changed: fetch https://crystal-champions-game.verc
 - `validateMathQuestion(text, grade)` — post-generation math validation; rejects violations
 - `validateSubjectQuestion(text, subject, grade)` — post-generation non-math validation; rejects violations
 - All validation is in `lib/auto-questions.ts` → `generateAutoArenaQuestions()`
+
+### Grade Detection in startArenaSession() (app/actions/arena.ts)
+Grade is resolved in this priority order:
+1. `child_mission_config.grade_level` (smallint, config table)
+2. `child_profiles.grade_level` (TEXT, now fetched in the initial `getChildProfile()` select — no extra query needed)
+3. Default 3 if neither is set
+
+`getChildProfile()` MUST include `grade_level` in its select list. Do not add a separate DB round-trip for grade_level.
+
+### Arena load performance — parallel query pattern (FIXED 2026-06-07)
+`startArenaSession()` runs queries in three parallel rounds after `getChildProfile()`:
+- Round 1: mission row + world_id fallback + child_mission_config grade — all in `Promise.all`
+- Round 2: boss HP + hero_id — in `Promise.all`, depends only on worldId from round 1
+- Round 3: OpenAI question generation + hero details — start OpenAI immediately when grade is known, run hero details fetch in parallel. This cuts auto-mode load time by ~200ms vs sequential.
 
 ## Battle Visual Requirements
 
