@@ -101,6 +101,8 @@ The white aura is applied as CSS `filter: drop-shadow(...)` directly on the `<im
 
 The `meta.glow` value is also used in the `dropShadow` (idle and lowHp states) — any warm color there will appear as an orange aura around the enemy body.
 
+**Target lock ring** (shown during battle/challenge phases, `locked=true`): uses CSS `border` + `box-shadow` on absolute-positioned divs. MUST use cool-white `rgba(220,235,255,...)` / `rgba(200,220,255,...)` — never `rgba(255,220,80,...)` or any warm yellow/gold (was FIXED 2026-06-06, was the root cause of persistent orange aura in production).
+
 ## Miti Size Rule
 
 Miti must keep normal full size during arena staging and battle walking. Only the enemy uses HP-based shrinking.
