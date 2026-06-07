@@ -6,7 +6,7 @@ import Image from "next/image";
 // boy-0..10 and girl-0..9 live in /public/heroes/
 // gilad_01..16 live in /public/heroes/gilad/
 
-const GILAD_IMAGES = Array.from({ length: 16 }, (_, i) => `/heroes/gilad/gilad_${String(i + 1).padStart(2, "0")}.png`);
+const GILAD_IMAGES = Array.from({ length: 16 }, (_, i) => `/heroes/gilad/gilad_v2_${String(i + 1).padStart(2, "0")}.png`);
 
 const BOY_IMAGES = [
   "/heroes/boy-0.png",   // storm / default  — dark blue
