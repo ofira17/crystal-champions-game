@@ -690,17 +690,22 @@ export async function submitAnswer(
       newBossHp = await admin
         .rpc("damage_boss", { p_child_id: child.id, p_world_id: session.world_id, p_damage: bossDamage })
         .then(r => r.data ?? 100);
-      bossDefeated = newBossHp === 0;
-
-      if (!bossDefeated && allAnswered) {
-        await admin.rpc("defeat_boss", { p_child_id: child.id, p_world_id: session.world_id });
-        newBossHp    = 0;
-        bossDefeated = true;
-      }
 
       newEnergy = await admin
         .rpc("add_child_energy", { p_child_id: child.id, p_delta: 1 })
         .then(r => r.data ?? child.energy);
+    }
+
+    // Boss defeated only when all questions answered AND score >= 90%
+    if (allAnswered) {
+      const score = totalAnswered > 0 ? correctCount / totalAnswered : 0;
+      if (score >= 0.9) {
+        bossDefeated = true;
+        if (session.world_id && newBossHp > 0) {
+          await admin.rpc("defeat_boss", { p_child_id: child.id, p_world_id: session.world_id });
+          newBossHp = 0;
+        }
+      }
     }
 
     // Persist attempt on the session row (cannot use question_attempts —
@@ -797,18 +802,22 @@ export async function submitAnswer(
     newBossHp = await admin
       .rpc("damage_boss", { p_child_id: child.id, p_world_id: session.world_id, p_damage: bossDamage })
       .then(r => r.data ?? 100);
-    bossDefeated = newBossHp === 0;
-
-    // Last question in session: if rounding left 1–2 HP, kill the boss to guarantee victory
-    if (!bossDefeated && allAnswered) {
-      await admin.rpc("defeat_boss", { p_child_id: child.id, p_world_id: session.world_id });
-      newBossHp    = 0;
-      bossDefeated = true;
-    }
 
     newEnergy = await admin
       .rpc("add_child_energy", { p_child_id: child.id, p_delta: 1 })
       .then(r => r.data ?? child.energy);
+  }
+
+  // Boss defeated only when all questions answered AND score >= 90%
+  if (allAnswered) {
+    const score = totalAnswered > 0 ? correctCount / totalAnswered : 0;
+    if (score >= 0.9) {
+      bossDefeated = true;
+      if (session.world_id && newBossHp > 0) {
+        await admin.rpc("defeat_boss", { p_child_id: child.id, p_world_id: session.world_id });
+        newBossHp = 0;
+      }
+    }
   }
 
   // Record attempt (via admin to bypass RLS)
@@ -918,16 +927,9 @@ export async function useMegaHit(
     }).then(r => r.data ?? 0),
   ]);
 
-  const bossDefeated = newBossHp === 0;
-  if (bossDefeated) {
-    await admin
-      .from("game_sessions")
-      .update({ boss_defeated: true, ended_at: new Date().toISOString() })
-      .eq("id", sessionId);
-    await writeAudit(child.id, "boss_defeated", "world_progress", session.world_id);
-  }
-
-  return { success: true, newBossHp, newEnergy, bossDefeated };
+  // Mega hit deals damage but never defeats the boss early;
+  // victory is determined only after all questions are answered (submitAnswer).
+  return { success: true, newBossHp, newEnergy, bossDefeated: false };
 }
 
 // ══════════════════════════════════════════════════════════

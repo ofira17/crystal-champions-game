@@ -48,6 +48,15 @@ C:\Users\97253\Desktop\קלוד\crystal-champions\.claude\settings.local.json
 
 **Never set:** `bypassPermissions` or `dangerously-skip-permissions`.
 
+## Battle Completion Rules (CANONICAL — DO NOT revert)
+
+- Default battle = 20 questions. All questions MUST be answered before any reward or victory.
+- Victory (reward/next stage) only when **allAnswered AND score ≥ 90%** (18+/20 correct).
+- Below 90%: EndScreen (fail/retry flow) — no reward box.
+- No early boss defeat from HP damage or megahit. `bossDefeated` is set only in `submitAnswer` when `allAnswered && correctCount/totalAnswered >= 0.9`.
+- Megahit: deals damage only, never sets `bossDefeated = true`, never triggers victory.
+- Client guard: victory phase requires BOTH `res.bossDefeated && res.allAnswered`.
+
 ## Battle Enemy Flow (CANONICAL — DO NOT revert)
 
 ### Entry sequence

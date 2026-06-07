@@ -1813,17 +1813,13 @@ function ArenaPageContent() {
       setFeedback(null);
       setLastAnswer(null);
 
-      if (res.bossDefeated) {
-        const totalAnswered = answered + 1;
-        const pct = totalAnswered > 0 ? newCorrect / totalAnswered : 0;
-        if (pct >= 0.9) {
-          bgMusicRef.current?.pause();
-          playSound("victory");
-          // Enemy dissolves in-arena with smooth white fade before victory screen
-          setEnemyDissolving(true);
-          await new Promise(r => setTimeout(r, 950));
-          setEnemyDissolving(false);
-        }
+      if (res.bossDefeated && res.allAnswered) {
+        bgMusicRef.current?.pause();
+        playSound("victory");
+        // Enemy dissolves in-arena with smooth white fade before victory screen
+        setEnemyDissolving(true);
+        await new Promise(r => setTimeout(r, 950));
+        setEnemyDissolving(false);
         setPhase("victory");
       } else if (res.allAnswered) {
         setPhase("end");
