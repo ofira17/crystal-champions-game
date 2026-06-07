@@ -139,14 +139,6 @@ export async function saveMissionConfig(
   if (payload.active_mission_type === "treasure_map") {
     const admin = createAdminClient();
 
-    // Ensure any existing active mission has at least 25 questions
-    await admin
-      .from("child_missions")
-      .update({ questions_per_run: 25 })
-      .eq("child_id", payload.child_profile_id)
-      .eq("status", "active")
-      .lt("questions_per_run", 25);
-
     // First try: set assigned to this child
     // Second try: most recent active treasure_map by this parent (unassigned)
     // Third try: any non-archived set by this parent
@@ -203,7 +195,7 @@ export async function saveMissionConfig(
         mission_type:       "boss",
         status:             "active",
         selection_strategy: "random",
-        questions_per_run:  25,
+        questions_per_run:  20,
         created_by:         user.id,
       });
     }

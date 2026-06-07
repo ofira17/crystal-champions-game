@@ -680,7 +680,7 @@ export async function submitAnswer(
     const incorrectCount = session.incorrect_count + (isCorrect ? 0 : 1);
     const totalAnswered  = correctCount + incorrectCount;
     const allAnswered    = totalAnswered >= autoPool.length;
-    const bossDamage     = isCorrect ? Math.floor(100 / (session.questions_per_run ?? 10)) : 0;
+    const bossDamage     = isCorrect ? Math.floor(100 / (session.questions_per_run ?? 20)) : 0;
 
     let newBossHp    = 100;
     let newEnergy    = child.energy;
@@ -786,7 +786,7 @@ export async function submitAnswer(
   const incorrectCount = session.incorrect_count + (isCorrect ? 0 : 1);
   const totalAnswered  = correctCount + incorrectCount;
   const allAnswered    = totalAnswered >= qIds.length;
-  const bossDamage     = isCorrect ? Math.floor(100 / (session.questions_per_run ?? 10)) : 0;
+  const bossDamage     = isCorrect ? Math.floor(100 / (session.questions_per_run ?? 20)) : 0;
 
   // Atomic DB updates via admin RPC
   let newBossHp    = 100;
@@ -902,7 +902,7 @@ export async function useMegaHit(
   if (!session.world_id) return { success: false, error: "עולם לא מוגדר לסשן זה" };
 
   // Dynamic damage: Mega Hit = 2 × normal answer damage for this session
-  const bossDamagePerCorrect = Math.floor(100 / (session.questions_per_run ?? 10));
+  const bossDamagePerCorrect = Math.floor(100 / (session.questions_per_run ?? 20));
   const megaHitDamage        = 2 * bossDamagePerCorrect;
 
   // Apply damage + deduct energy atomically

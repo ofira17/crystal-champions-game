@@ -220,6 +220,16 @@ The question panel and feedback bar are rendered **BELOW** the arena `<section>`
 - **Code:** `HeroDisplay.tsx` — `getHeroImage()` branches on `colorTheme === "stone"` → `GILAD_IMAGES[]`
 - **Skins:** skinIndex 0-15 cycle through all 16 Gilad frames
 
+## Default questions_per_run
+
+Default is **20** (changed from 10 on 2026-06-07). Applies to:
+- New mission creation (`MissionForm.tsx` initial state)
+- Auto-created child_missions on treasure_map activation (`app/actions/mission.ts`)
+- Arena fallback when `session.questions_per_run` is null (`app/actions/arena.ts`)
+
+The auto-patch that forced all missions with <25 questions up to 25 has been removed.
+Existing custom mission values are preserved as-is.
+
 ## Deployment Status (as of 2026-06-07)
 
 - **Correct production deployment is live** from `C:\Users\97253\Desktop\קלוד\crystal-champions`
