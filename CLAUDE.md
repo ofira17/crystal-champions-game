@@ -345,3 +345,11 @@ Questions that fail this hard block are replaced by fallback questions from `lib
 5. Verify live build: fetch the production URL and confirm new chunk hashes in the HTML
 
 **Never push only to origin and expect production to update.**
+
+## Gilad PNG CDN Cache Bust Rule (FIXED 2026-06-07)
+
+Local Gilad PNGs were always RGBA (correct). Production CDN served stale RGB (white-background) versions because Vercel/CDN cached the old `gilad_01-16.png` filenames even after the RGBA files were committed (commit 344105d).
+
+**Fix:** Create versioned filenames `gilad_v2_01.png ... gilad_v2_16.png` (copies of RGBA originals) and update `GILAD_IMAGES` in `components/child/HeroDisplay.tsx` to reference the new names. Old files kept but not referenced.
+
+**Rule:** If production serves stale assets after a PNG replacement, do NOT reuse the old filename — create versioned copies (e.g., `_v2_`) and update all references. CDN cache is busted automatically because new URLs have no cache entry.
