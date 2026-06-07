@@ -300,6 +300,8 @@ Questions that fail this hard block are replaced by fallback questions from `lib
 
 **Grade 1 defense-in-depth (arena.ts):** After `generateAutoArenaQuestions()` returns, `startArenaSession()` runs a second `isGrade1Safe()` check on every auto-question and replaces any that fail with grade-1 fallback questions. This catches cached/stale session questions and future model drift.
 
+**Final mandatory Grade 1 validator (arena.ts — CRITICAL — DO NOT REMOVE):** Immediately before the `return { success: true, ... }` in `startArenaSession()`, a final validator runs on ALL questions regardless of source (auto, DB, fallback, cache, old session). For grade 1 it applies: (1) `isGrade1Safe(text)` — keyword block, (2) `validateGrade1MathNumeric(text)` — numeric range check if question contains digits. Each rejected question is logged as `[arena] final grade=1 rejected question="..." reason="keyword-block|numeric-range"` and replaced with a safe fallback. This is the last gate before questions reach the arena UI and catches DB questions that bypass all earlier validation.
+
 **Root cause (2026-06-07 fix):** `GRADE_1_HARD_BLOCK` originally contained `כפל` but not `כפול`, and `חילוק`/`מחולק` but not `חלקי`. Questions like "כמה זה 6 כפול 7" and "כמה זה 48 חלקי 6" (from grade-3 fallback bank) passed the filter. Fix: added all surface-form variants and exported `isGrade1Safe()` for reuse in arena.ts.
 
 **Fallback question bank:** `lib/fallback-questions.ts` — pre-built safe questions for grades 1-6. Grade 1 questions are addition/subtraction up to 20, basic Hebrew, animals, and everyday knowledge. Never modify grade 1 fallback to include forbidden topics.

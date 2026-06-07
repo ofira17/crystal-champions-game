@@ -16,6 +16,7 @@ import {
   isGrade1Safe,
   type AutoQuestion,
 } from "@/lib/auto-questions";
+import { validateGrade1MathNumeric } from "@/lib/math-grade-rules";
 
 // ── Types exposed to client ────────────────────────────────
 // CRITICAL: correct_answer is NEVER included here
@@ -538,6 +539,47 @@ export async function startArenaSession(
 
   if (questions.length === 0) {
     return { success: false, error: "אין שאלות זמינות להרפתקה" };
+  }
+
+  // ── Final mandatory Grade 1 validator ─────────────────────────────────────────
+  // Runs on ALL questions regardless of source: auto, DB, fallback, cache, old session.
+  // This is the last gate before questions reach the arena UI.
+  if (grade === 1) {
+    const { getFallbackQuestions: getFB } = await import("@/lib/fallback-questions");
+    const validated: ArenaQuestion[] = [];
+    for (const q of questions) {
+      const text = q.text_he;
+      let reason = "";
+
+      if (!isGrade1Safe(text)) {
+        reason = "keyword-block";
+      } else if (/\d/.test(text) && !validateGrade1MathNumeric(text)) {
+        reason = "numeric-range";
+      }
+
+      if (reason) {
+        console.warn(`[arena] final grade=1 rejected question="${text.slice(0, 100)}" reason="${reason}"`);
+        const [replacement] = getFB(1, 1);
+        if (replacement) {
+          validated.push({
+            id:          replacement.id,
+            text_he:     replacement.text_he,
+            option_a_he: replacement.option_a_he,
+            option_b_he: replacement.option_b_he,
+            option_c_he: replacement.option_c_he,
+            option_d_he: replacement.option_d_he,
+            difficulty:  replacement.difficulty,
+          });
+        }
+      } else {
+        validated.push(q);
+      }
+    }
+
+    if (validated.length !== questions.length) {
+      console.warn(`[arena] final grade=1 validator: replaced ${questions.length - validated.length} invalid question(s)`);
+    }
+    questions = validated;
   }
 
   // ── Create game session ────────────────────────────────────────────────────────
