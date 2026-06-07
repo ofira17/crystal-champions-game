@@ -2829,7 +2829,8 @@ function ArenaPageContent() {
               }
               style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}
             >
-              {/* Hero sprite — selected hero portrait, direction-aware via CSS flip */}
+              {/* Hero sprite — selected hero portrait, direction-aware via 3D rotateY (same technique as CrystalEnemy).
+                  rotateY(35deg) = face right (toward enemy on right); rotateY(-35deg) = face left. Never faces screen. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={getHeroImage(arenaData.heroGender ?? "M", arenaData.heroColorTheme ?? "default", 0)}
@@ -2837,10 +2838,14 @@ function ArenaPageContent() {
                 style={{
                   height: 190, width: "auto", display: "block",
                   transform: (isAttacking || phase === "shooting" || phase === "feedback")
-                    ? "scale(1.18) translateY(-8px)"
+                    ? "perspective(600px) scale(1.18) translateY(-8px)"
                     : (isStagingActive || (isHeroMoving && phase === "battle"))
-                    ? (heroFacingLeft ? "scale(-1.35, 1.35)" : "scale(1.35)")
-                    : heroFacingLeft ? "scaleX(-1)" : "",
+                    ? heroFacingLeft
+                      ? "perspective(600px) scale(1.35) rotateY(-35deg)"
+                      : "perspective(600px) scale(1.35) rotateY(35deg)"
+                    : heroFacingLeft
+                    ? "perspective(600px) rotateY(-35deg)"
+                    : "perspective(600px) rotateY(35deg)",
                   transformOrigin: (isStagingActive || (isHeroMoving && phase === "battle"))
                     ? "bottom center"
                     : "center center",
