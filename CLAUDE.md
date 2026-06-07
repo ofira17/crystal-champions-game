@@ -211,6 +211,15 @@ The question panel and feedback bar are rendered **BELOW** the arena `<section>`
 
 **Root cause fixed (2026-06-05):** Both were `position: absolute` inside the arena, covering Miti, the enemy, and the crystal beam during battle.
 
+## Hero Assets
+
+### Gilad the Crystal Guardian (גלעד הסלעי)
+- **Hero ID:** `hero-0014-0000-0000-000000000014`
+- **DB:** Registered in migration 011; gender=M, rarity=Rare, color_theme="stone"
+- **Images:** `public/heroes/gilad/gilad_01.png` … `gilad_16.png` (16 frames)
+- **Code:** `HeroDisplay.tsx` — `getHeroImage()` branches on `colorTheme === "stone"` → `GILAD_IMAGES[]`
+- **Skins:** skinIndex 0-15 cycle through all 16 Gilad frames
+
 ## Deployment Status (as of 2026-06-07)
 
 - **Correct production deployment is live** from `C:\Users\97253\Desktop\קלוד\crystal-champions`

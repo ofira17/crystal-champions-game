@@ -4,6 +4,9 @@ import Image from "next/image";
 
 // ── Real hero images ──────────────────────────────────────────────────────────
 // boy-0..10 and girl-0..9 live in /public/heroes/
+// gilad_01..16 live in /public/heroes/gilad/
+
+const GILAD_IMAGES = Array.from({ length: 16 }, (_, i) => `/heroes/gilad/gilad_${String(i + 1).padStart(2, "0")}.png`);
 
 const BOY_IMAGES = [
   "/heroes/boy-0.png",   // storm / default  — dark blue
@@ -58,6 +61,9 @@ const GIRL_THEME_INDEX: Record<string, number> = {
 
 /** Returns the image path for a hero based on gender, theme and which skin slot is active */
 function getHeroImage(gender: "M" | "F", colorTheme: string, skinIndex: number): string {
+  if (colorTheme === "stone" || colorTheme === "gilad") {
+    return GILAD_IMAGES[skinIndex % GILAD_IMAGES.length];
+  }
   const images = gender === "M" ? BOY_IMAGES : GIRL_IMAGES;
   if (skinIndex > 0) {
     return images[skinIndex % images.length];
@@ -177,4 +183,4 @@ export function HeroDisplay({
 }
 
 // ── Exported helper so HeroCollection can build skin thumbnails ───────────────
-export { getHeroImage, BOY_IMAGES, GIRL_IMAGES };
+export { getHeroImage, BOY_IMAGES, GIRL_IMAGES, GILAD_IMAGES };
