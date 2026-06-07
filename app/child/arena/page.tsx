@@ -2833,34 +2833,18 @@ function ArenaPageContent() {
               }
               style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}
             >
-              {/* Hero sprite — Miti the Crystal Champion; direction-aware */}
+              {/* Hero sprite — selected hero portrait, direction-aware via CSS flip */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={(() => {
-                  if (isAttacking || phase === "shooting" || phase === "feedback") {
-                    // Always use side/profile sprites — never front/back (no screen-facing)
-                    const ex = enemyStateRef.current.x;
-                    return ex < heroPos.x ? "/sprites/miti/attack-left.png" : "/sprites/miti/attack-right.png";
-                  }
-                  if (isStagingActive)
-                    return runFrame === 0 ? "/sprites/miti/run-right.png" : "/sprites/miti/run-right2.png";
-                  if (isHeroMoving && phase === "battle")
-                    return runFrame === 0 ? "/sprites/miti/run-right.png" : "/sprites/miti/run-right2.png";
-                  // Idle sprites are directional — face toward enemy, no flip needed
-                  return heroFacingLeft ? "/sprites/miti/idle-left.png" : "/sprites/miti/idle-right.png";
-                })()}
+                src={getHeroImage(arenaData.heroGender ?? "M", arenaData.heroColorTheme ?? "default", 0)}
                 alt={arenaData.heroName}
                 style={{
                   height: 190, width: "auto", display: "block",
-                  // Attack and idle sprites are directional — no flip needed.
-                  // Run uses run-right.png only — flip horizontally when facing left.
-                  // Run sprites have ~30% extra transparent canvas; scale(1.35) compensates so
-                  // Miti appears full size during staging and battle walking.
                   transform: (isAttacking || phase === "shooting" || phase === "feedback")
                     ? "scale(1.18) translateY(-8px)"
                     : (isStagingActive || (isHeroMoving && phase === "battle"))
                     ? (heroFacingLeft ? "scale(-1.35, 1.35)" : "scale(1.35)")
-                    : "",
+                    : heroFacingLeft ? "scaleX(-1)" : "",
                   transformOrigin: (isStagingActive || (isHeroMoving && phase === "battle"))
                     ? "bottom center"
                     : "center center",
