@@ -224,8 +224,8 @@ The question panel and feedback bar are rendered **BELOW** the arena `<section>`
 
 - **Correct production deployment is live** from `C:\Users\97253\Desktop\קלוד\crystal-champions`
 - **Production URL:** https://crystal-champions-game.vercel.app
-- **Live commit:** 84a1102
-- **Live deployment:** dpl_2SH4iXw7FdKFqsdyL6a2oSGV5due (crystal-champions-game-hi8ihnr3n)
+- **Live commit:** b851c0f (feat: add Gilad the Crystal Guardian hero assets)
+- **Live deployment:** dpl_9WSHa5gMeXnun2hPL4V8SbyqM1ra (crystal-champions-game-2r7qky773)
 - **Last deploy:** `vercel --prod` — GitHub push did not auto-trigger Vercel (use `vercel --prod` manually)
 
 ## Recovery: GitHub push did not trigger Vercel
