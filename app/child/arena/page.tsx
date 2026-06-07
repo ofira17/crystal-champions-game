@@ -1261,9 +1261,9 @@ function ArenaPageContent() {
       stagingRef.current = true;
       setEnemyVisible(false);
       setEnemyDissolving(false);
-      heroPosRef.current = { x: 11, y: HERO_BATTLE_Y };
-      heroPosForAiRef.current = { x: 11, y: HERO_BATTLE_Y };
-      setHeroPos({ x: 11, y: HERO_BATTLE_Y });
+      heroPosRef.current = { x: 3, y: HERO_BATTLE_Y };
+      heroPosForAiRef.current = { x: 3, y: HERO_BATTLE_Y };
+      setHeroPos({ x: 3, y: HERO_BATTLE_Y });
       setHeroFacingLeft(false);
       heroFacingLeftRef.current = false;
       setIsStagingActive(true);
@@ -1271,7 +1271,7 @@ function ArenaPageContent() {
         stagingRef.current = false;
         setIsStagingActive(false);
         setEnemyVisible(true); // enemy suddenly appears after Miti walks in
-      }, 1050);
+      }, 1500);
       const v = enemyVariantRef.current;
       // Pick an entry point at the arena edge (not outside) so the sprite is never clipped
       let x = 50, y = 8;
@@ -1556,7 +1556,7 @@ function ArenaPageContent() {
       // During staging: hero auto-walks right to battle position, ignore player input
       if (stagingRef.current) {
         if (x < HERO_BATTLE_X - 0.3) {
-          x = Math.min(x + MOVE_SPEED * 1.3, HERO_BATTLE_X);
+          x = Math.min(x + MOVE_SPEED * 0.75, HERO_BATTLE_X);
           y = Math.min(HERO_BATTLE_Y, yMaxPct);
           moved = true;
           goingLeft = false;
@@ -2837,8 +2837,10 @@ function ArenaPageContent() {
                 alt={arenaData.heroName}
                 style={{
                   height: 190, width: "auto", display: "block",
-                  transform: (isAttacking || phase === "shooting" || phase === "feedback")
-                    ? "perspective(600px) scale(1.18) translateY(-8px)"
+                  transform: (isAttacking || phase === "challenge" || phase === "shooting" || phase === "feedback")
+                    ? heroFacingLeft
+                      ? "perspective(600px) scale(1.22) translateY(-8px) rotateY(-35deg)"
+                      : "perspective(600px) scale(1.22) translateY(-8px) rotateY(35deg)"
                     : (isStagingActive || (isHeroMoving && phase === "battle"))
                     ? heroFacingLeft
                       ? "perspective(600px) scale(1.35) rotateY(-35deg)"
