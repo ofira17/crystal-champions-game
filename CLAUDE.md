@@ -216,8 +216,9 @@ Then verify production chunks changed: fetch https://crystal-champions-game.verc
 
 ## Grade-Level Question Rules (Israeli MoE Curriculum — Source of Truth)
 
+**Guardrails source of truth:** `crystal_champions_curriculum_guardrails_he.md` (version 2026-06-07)
 **Central rules file:** `lib/grade-subject-rules.ts` (all subjects, all grades 1-6)
-**Math rules file:** `lib/math-grade-rules.ts` (detailed math-specific validation)
+**Math rules file:** `lib/math-grade-rules.ts` (detailed math-specific validation + `validateGrade1MathNumeric`)
 
 ### Style/Level References (do NOT copy text — use only as level guide)
 - **Math:** שבילים, שבילים פלוס, ה.ש.ב.ח.ה
@@ -251,9 +252,12 @@ Then verify production chunks changed: fetch https://crystal-champions-game.verc
 ### Enforcement
 - `buildAllSubjectsInstruction(grade)` — injects per-subject rules into AI prompt
 - `buildMathGradeInstruction(grade)` — injects math rules into AI prompt
-- `validateMathQuestion(text, grade)` — post-generation math validation; rejects violations
+- `validateMathQuestion(text, grade)` — post-generation math keyword validation; rejects violations
+- `validateGrade1MathNumeric(text)` — Grade 1 only: extracts integers, rejects any >100 or any >20 that is not a whole ten
 - `validateSubjectQuestion(text, subject, grade)` — post-generation non-math validation; rejects violations
+- `GRADE_1_HARD_BLOCK` — keyword hard-block for grade 1 (includes geography/civics terms per guardrails)
 - All validation is in `lib/auto-questions.ts` → `generateAutoArenaQuestions()`
+- Every rejected question is logged with reason; fallback replaces it immediately — no invalid question ever reaches the child
 
 ### Grade Detection in startArenaSession() (app/actions/arena.ts)
 Grade is resolved in this priority order:

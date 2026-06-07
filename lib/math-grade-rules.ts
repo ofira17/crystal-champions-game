@@ -130,6 +130,22 @@ export function buildMathGradeInstruction(grade: number): string {
 }
 
 /**
+ * Grade 1 numeric math validator (guardrails §"Grade 1 numeric math validator").
+ * Extracts all integers from the question text and applies strict range rules:
+ *   - any number > 100 → reject
+ *   - any number in (20, 100] that is not a whole ten → reject
+ * Returns true if the question passes numeric checks.
+ */
+export function validateGrade1MathNumeric(text: string): boolean {
+  const numbers = [...text.matchAll(/\d+/g)].map(m => parseInt(m[0], 10));
+  for (const n of numbers) {
+    if (n > 100) return false;
+    if (n > 20 && n % 10 !== 0) return false;
+  }
+  return true;
+}
+
+/**
  * Validate that a math question text does not contain forbidden operations for the grade.
  * Returns true if the question passes (allowed), false if it should be rejected.
  * Uses heuristic keyword matching — not 100% perfect but catches common violations.

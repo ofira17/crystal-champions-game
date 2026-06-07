@@ -6,11 +6,12 @@
 
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { buildMathGradeInstruction, validateMathQuestion } from "@/lib/math-grade-rules";
+import { buildMathGradeInstruction, validateMathQuestion, validateGrade1MathNumeric } from "@/lib/math-grade-rules";
 import { buildAllSubjectsInstruction, validateSubjectQuestion } from "@/lib/grade-subject-rules";
 import { getFallbackQuestions } from "@/lib/fallback-questions";
 
 // Hard-blocked keywords for grade 1 — any question containing these is rejected regardless of subject.
+// Source of truth: crystal_champions_curriculum_guardrails_he.md §"Grade 1 general knowledge validator"
 const GRADE_1_HARD_BLOCK = [
   // multiplication — all surface forms
   "כפל", "כפול", "כפלי", "מכפלה", "לכפול", "פעמים", "×", "*",
@@ -26,6 +27,8 @@ const GRADE_1_HARD_BLOCK = [
   "מהפכה", "מלחמה",
   // grammar
   "דקדוק", "שורש", "בניין",
+  // geography / civics blocked at grade 1
+  "מדינה", "מדינות", "בירה", "בירות", "מפה", "גבול", "היסטוריה", "תקופה",
 ];
 
 /** Returns true if the question text is safe for grade 1 (no forbidden keywords). */
@@ -183,17 +186,34 @@ ${subjectRules}
         !isAnswerLetter(q?.correct_answer)
       ) continue;
 
+      const text = q.text_he as string;
+
       // Grade 1 hard block: reject any question containing a forbidden keyword anywhere in text.
-      if (grade === 1 && !isGrade1Safe(q.text_he as string)) continue;
+      if (grade === 1 && !isGrade1Safe(text)) {
+        console.warn(`[arena] grade1 keyword-block rejected: "${text.slice(0, 60)}"`);
+        continue;
+      }
 
       // Reject math questions that violate grade-level rules
       const subjectLower = (q.subject_he as string).toLowerCase();
       const isMath = subjectLower.includes("מתמטיקה") || subjectLower.includes("חשבון") || subjectLower.includes("מספרים");
-      if (isMath && !validateMathQuestion(q.text_he, grade)) continue;
+      if (isMath && !validateMathQuestion(text, grade)) {
+        console.warn(`[arena] math keyword-block grade${grade} rejected: "${text.slice(0, 60)}"`);
+        continue;
+      }
+
+      // Grade 1 math: additional numeric range validation (guardrails §"Grade 1 numeric math validator")
+      if (grade === 1 && isMath && !validateGrade1MathNumeric(text)) {
+        console.warn(`[arena] grade1 numeric-block rejected: "${text.slice(0, 60)}"`);
+        continue;
+      }
 
       // Reject non-math questions that violate grade-level subject rules
       const canonicalSubject = SUBJECT_CANONICAL[q.subject_he as string] ?? q.subject_he;
-      if (!isMath && !validateSubjectQuestion(q.text_he, canonicalSubject, grade)) continue;
+      if (!isMath && !validateSubjectQuestion(text, canonicalSubject, grade)) {
+        console.warn(`[arena] subject-block grade${grade}/${canonicalSubject} rejected: "${text.slice(0, 60)}"`);
+        continue;
+      }
 
       out.push({
         id:             `auto-${randomUUID()}`,
