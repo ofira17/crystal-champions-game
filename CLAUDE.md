@@ -163,6 +163,18 @@ Always run `git push canonical main` (in addition to `git push origin main`) to 
 **A commit is not considered live until production bundles contain the changed class/function — not only because GitHub HEAD changed.**
 Vercel may cache a prior build or be mid-deploy. To confirm a change is live, fetch the production bundle and grep for the new symbol. If it's an inline `<style>` in a route component (not a global CSS file), it lives in the route's lazy-loaded JS chunk, not in the global CSS bundle — verify the JS chunk, not the CSS file.
 
+### Production Fix Verification Protocol (PERMANENT — applies to every future production fix)
+
+After every production fix, ALL of the following steps are mandatory before reporting success:
+
+1. **Do not rely on git push alone.** A push to canonical/main does not guarantee Vercel deployed.
+2. **Verify Vercel status is READY.** Run `npx vercel ls` — the latest entry must show `● Ready` and be aliased to `crystal-champions-game.vercel.app`.
+3. **Verify the production URL is up.** Fetch https://crystal-champions-game.vercel.app and confirm it loads without error.
+4. **Verify live commit matches the fix commit.** The deployment shown in `vercel ls` must correspond to the fix commit SHA — confirm via `vercel inspect <deployment-url>` or by grepping the production bundle for the changed symbol.
+5. **Verify fresh production bundle/chunks when relevant.** When JS/CSS changed, fetch the production HTML and confirm `/_next/static/chunks/` URLs differ from the previous build. Identical chunk hashes mean the new build is NOT live.
+6. **If GitHub auto-deploy did not trigger**, run a manual production deploy from local source: `vercel --prod --yes` from `C:\Users\97253\Desktop\קלוד\crystal-champions`. Never redeploy an old production slug.
+7. **Never report production success before live commit verification.** "Pushed to canonical" is not success. Only a verified READY deployment with matching commit is success.
+
 # Crystal Champions — Source-of-Truth Rules
 
 ## Project Identity
