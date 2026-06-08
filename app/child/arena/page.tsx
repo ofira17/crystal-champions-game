@@ -808,7 +808,7 @@ function ArenaPageContent() {
   const [enemyVisible,   setEnemyVisible]   = useState(false);
   const [enemyDissolving, setEnemyDissolving] = useState(false);
   const [megaBlasting,  setMegaBlasting]  = useState(false);
-  const [heroAnim,      setHeroAnim]      = useState<"idle" | "dash" | "recoil">("idle");
+  const [heroAnim,      setHeroAnim]      = useState<"idle" | "dash" | "recoil" | "attack">("idle");
   const [showAimLine,   setShowAimLine]   = useState(false);
   const [showProjectile,setShowProjectile]= useState(false);
   const [projectileHit, setProjectileHit] = useState(false);
@@ -1679,21 +1679,19 @@ function ArenaPageContent() {
 
       // 1. Aim line flashes briefly
       setShowAimLine(true);
-      await wait(80);
+      await wait(60);
       setShowAimLine(false);
 
-      // 2. Hero dashes toward enemy
-      setHeroAnim("dash");
-      await wait(130);
-
-      // 3. Hero recoils into attack lunge — projectile launches simultaneously.
-      // Hero faces the enemy: mirror sprite based on enemy-x vs hero-x.
-      setHeroAnim("recoil");
-      setIsAttacking(true); // lunge/shoot pose while projectile is in flight
+      // 2+3. Hero ATTACKS — single combined lunge animation + projectile launch.
+      // Hero faces the enemy, snapping the sprite to point toward it.
+      const facingRight = enemyStateRef.current.x >= heroPosRef.current.x;
+      heroFacingLeftRef.current = !facingRight;
+      setHeroFacingLeft(!facingRight);
+      setHeroAnim("attack");   // plays hero-attack-shoot 480ms lunge keyframes
+      setIsAttacking(true);    // dramatic shoot pose on img: scale+translateX+rotateZ+skew
       if (arenaRef.current) {
         const aw = arenaRef.current.offsetWidth;
         const ah = arenaRef.current.offsetHeight;
-        const facingRight = enemyStateRef.current.x >= heroPosRef.current.x;
         // Origin: Miti's attack hand — right side when facing right, left side when facing left
         const handOffsetX = facingRight ? 52 : -52;
         const hxPx = (heroPosRef.current.x / 100) * aw + handOffsetX;
@@ -1703,8 +1701,6 @@ function ArenaPageContent() {
         const eyPx = (enemyStateRef.current.y / 100) * ah;
         const dxAbs = exPx - hxPx;
         const dyAbs = eyPx - hyPx;
-        heroFacingLeftRef.current = !facingRight;
-        setHeroFacingLeft(!facingRight);
         // bottom-% origin so projectile is placed at Miti's attack hand
         setProjectileOriginX((hxPx / aw) * 100);
         setProjectileOriginY(((ah - hyPx) / ah) * 100);
@@ -1714,13 +1710,15 @@ function ArenaPageContent() {
       }
       setShowProjectile(true);
       setProjectileHit(true);
-      await wait(160);
-      setHeroAnim("idle");
-      setIsAttacking(false); // release attack pose after recoil settles
 
       // 4. Projectile travels — await server response during this window.
-      // Promise.all ensures we wait at least 310 ms AND for the server result.
-      const [res] = await Promise.all([submitPromise, wait(310)]);
+      // isAttacking stays true so hero holds the shoot pose while the crystal flies.
+      // Promise.all ensures we wait at least 380 ms AND for the server result.
+      const [res] = await Promise.all([submitPromise, wait(380)]);
+
+      // Hero returns to normal once projectile lands
+      setHeroAnim("idle");
+      setIsAttacking(false);
 
       if (!res.success) {
         setShowProjectile(false);
@@ -2188,6 +2186,24 @@ function ArenaPageContent() {
           0%   { transform: translateY(-32px); }
           55%  { transform: translateY(6px);   }
           100% { transform: translateY(0px);   }
+        }
+        /* ── Hero shooting attack — full lunge toward enemy, then recoil ── */
+        /* Two variants: lunge right (toward enemy on right) or left (toward enemy on left) */
+        .hero-anim-attack-right { animation: hero-attack-right 480ms cubic-bezier(0.22,1,0.36,1) forwards; }
+        .hero-anim-attack-left  { animation: hero-attack-left  480ms cubic-bezier(0.22,1,0.36,1) forwards; }
+        @keyframes hero-attack-right {
+          0%   { transform: translateY(0px)   translateX(0px)   scale(1);    }
+          18%  { transform: translateY(-10px) translateX(-8px)  scale(1.05); }
+          45%  { transform: translateY(-38px) translateX(32px)  scale(1.2);  }
+          68%  { transform: translateY(8px)   translateX(-5px)  scale(0.97); }
+          100% { transform: translateY(0px)   translateX(0px)   scale(1);    }
+        }
+        @keyframes hero-attack-left {
+          0%   { transform: translateY(0px)   translateX(0px)   scale(1);    }
+          18%  { transform: translateY(-10px) translateX(8px)   scale(1.05); }
+          45%  { transform: translateY(-38px) translateX(-32px) scale(1.2);  }
+          68%  { transform: translateY(8px)   translateX(5px)   scale(0.97); }
+          100% { transform: translateY(0px)   translateX(0px)   scale(1);    }
         }
 
         /* ── Aim line ── */
@@ -2830,7 +2846,9 @@ function ArenaPageContent() {
           }}>
             <div
               className={
-                heroAnim !== "idle"
+                heroAnim === "attack"
+                  ? (heroFacingLeft ? "hero-anim-attack-left" : "hero-anim-attack-right")
+                  : heroAnim !== "idle"
                   ? `hero-anim-${heroAnim}`
                   : isStagingActive
                   ? "hero-staging-walk"
@@ -2853,10 +2871,10 @@ function ArenaPageContent() {
                   height: 190, width: "auto", display: "block",
                   transform: isAttacking
                     ? heroFacingLeft
-                      // Attack lunge LEFT: lean forward, tilt body, punch arm out
-                      ? "perspective(600px) scale(1.35) translateY(-18px) translateX(-22px) rotateY(-45deg) rotateZ(6deg)"
-                      // Attack lunge RIGHT: lean forward, tilt body, punch arm out
-                      : "perspective(600px) scale(1.35) translateY(-18px) translateX(22px) rotateY(45deg) rotateZ(-6deg)"
+                      // Shooting LEFT: body tilts left, arm punches out left
+                      ? "scale(1.55) translateX(-36px) translateY(-12px) rotateZ(12deg) skewX(-8deg)"
+                      // Shooting RIGHT: body tilts right, arm punches out right
+                      : "scale(1.55) translateX(36px) translateY(-12px) rotateZ(-12deg) skewX(8deg)"
                     : (phase === "challenge" || phase === "shooting" || phase === "feedback")
                     ? heroFacingLeft
                       // Battle-ready duel stance LEFT
@@ -2874,7 +2892,7 @@ function ArenaPageContent() {
                     ? "bottom center"
                     : "center center",
                   filter: isAttacking
-                    ? "drop-shadow(0 0 32px rgba(34,211,238,1)) drop-shadow(0 0 16px white) brightness(1.6)"
+                    ? "drop-shadow(0 0 40px rgba(34,211,238,1)) drop-shadow(0 0 20px white) drop-shadow(0 0 8px rgba(192,132,252,0.9)) brightness(2.0)"
                     : (phase === "challenge" || phase === "shooting" || phase === "feedback")
                     ? phase === "feedback" && feedback?.isCorrect
                       ? "drop-shadow(0 0 22px rgba(34,211,238,0.95)) drop-shadow(0 0 10px white) brightness(1.35)"
