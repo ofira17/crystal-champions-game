@@ -1146,6 +1146,9 @@ function ArenaPageContent() {
   // Staging: first ~1s of each battle — hero auto-walks to position, contact blocked
   const stagingRef        = useRef(true);
   const [isStagingActive, setIsStagingActive] = useState(true);
+  // Tracks whether the hero has already walked into the arena this session.
+  // First battle → full entry walk. Q2+ → hero stays, only enemy respawns.
+  const hasEnteredArenaRef = useRef(false);
   const HERO_BATTLE_X     = 35;
   const HERO_BATTLE_Y     = 60;
   const isHeroMovingRef   = useRef(false);
@@ -1255,60 +1258,62 @@ function ArenaPageContent() {
   // Reset enemy entry point when a new battle/question starts
   useEffect(() => {
     if (phase === "battle") {
-      // Reset contact throttle so the first contact of every new enemy fires immediately
       lastContactRef.current = 0;
-      // Staging: hero walks in from left edge, contact blocked for ~1s; enemy hidden until staging ends
-      stagingRef.current = true;
-      setEnemyVisible(false);
       setEnemyDissolving(false);
-      heroPosRef.current = { x: 3, y: HERO_BATTLE_Y };
-      heroPosForAiRef.current = { x: 3, y: HERO_BATTLE_Y };
-      setHeroPos({ x: 3, y: HERO_BATTLE_Y });
-      setHeroFacingLeft(false);
-      heroFacingLeftRef.current = false;
-      setIsStagingActive(true);
-      const stagingTimer = setTimeout(() => {
-        stagingRef.current = false;
-        setIsStagingActive(false);
-        setEnemyVisible(true); // enemy suddenly appears after Miti walks in
-      }, 1500);
+
+      // Enemy ALWAYS enters from the RIGHT side — consistent across all variants and all questions.
       const v = enemyVariantRef.current;
-      // Pick an entry point at the arena edge (not outside) so the sprite is never clipped
-      let x = 50, y = 8;
-      if (v === "goblin") {
-        // ground-bound: always enters from RIGHT so battle staging is Miti-left vs enemy-right
-        x = 82 + Math.random() * 12;
-        y = 65 + Math.random() * 14;
-      } else if (v === "bat") {
-        // aerial: enters from top-left or top-right corner
-        x = Math.random() < 0.5 ? 6 : 94;
-        y = 8 + Math.random() * 10;
+      let ex: number, ey: number;
+      if (v === "bat") {
+        ex = 88 + Math.random() * 4; ey = 12 + Math.random() * 8;
       } else if (v === "giant") {
-        // stomps in from left or right edge, mid-height
-        const fromLeft = Math.random() < 0.5;
-        x = fromLeft ? 8 : 92;
-        y = 40 + Math.random() * 25;
+        ex = 88 + Math.random() * 4; ey = 45 + Math.random() * 10;
+      } else if (v === "wizard") {
+        ex = 88 + Math.random() * 4; ey = 30 + Math.random() * 15;
       } else {
-        // wizard appears at a random edge inside bounds
-        const edge = Math.floor(Math.random() * 4);
-        if (edge === 0)      { x = 6;   y = 20 + Math.random() * 50; }
-        else if (edge === 1) { x = 94;  y = 20 + Math.random() * 50; }
-        else if (edge === 2) { x = 20 + Math.random() * 60; y = 8;   }
-        else                 { x = 20 + Math.random() * 60; y = 88;  }
+        // goblin — ground level, right side
+        ex = 88 + Math.random() * 4; ey = 65 + Math.random() * 5;
       }
-      enemyStateRef.current.x = x;
-      enemyStateRef.current.y = y;
+      enemyStateRef.current.x = ex;
+      enemyStateRef.current.y = ey;
       enemyStateRef.current.vx = 0;
       enemyStateRef.current.vy = 0;
       enemyStateRef.current.spawnedAt = performance.now();
       enemyStateRef.current.teleportCooldown = 1.5;
-      // Face hero immediately — compute angle from spawn point toward hero
-      const _hdx = heroPosRef.current.x - x;
-      const _hdy = heroPosRef.current.y - y;
+      const _hdx = heroPosRef.current.x - ex;
+      const _hdy = heroPosRef.current.y - ey;
       enemyStateRef.current.facingDeg = (Math.atan2(_hdx, -_hdy) * 180) / Math.PI;
-      // Force directional sprite (not idle) from the first frame
       enemyStateRef.current.animPhase = 1;
-      return () => clearTimeout(stagingTimer);
+
+      if (!hasEnteredArenaRef.current) {
+        // First entry: hero walks in dramatically from the left edge.
+        hasEnteredArenaRef.current = true;
+        stagingRef.current = true;
+        setEnemyVisible(false);
+        setIsStagingActive(true);
+        heroPosRef.current = { x: 11, y: HERO_BATTLE_Y };
+        heroPosForAiRef.current = { x: 11, y: HERO_BATTLE_Y };
+        setHeroPos({ x: 11, y: HERO_BATTLE_Y });
+        setHeroFacingLeft(false);
+        heroFacingLeftRef.current = false;
+        const stagingTimer = setTimeout(() => {
+          stagingRef.current = false;
+          setIsStagingActive(false);
+          setEnemyVisible(true); // enemy pops in dramatically after hero walks into position
+        }, 1050);
+        return () => clearTimeout(stagingTimer);
+      } else {
+        // Q2+: hero stays in battle position, enemy re-enters from right quickly.
+        // stagingRef blocks contact while enemy travels in; hero keeps battle stance.
+        stagingRef.current = true;
+        setIsStagingActive(false);
+        setEnemyVisible(false);
+        const timer = setTimeout(() => {
+          stagingRef.current = false;
+          setEnemyVisible(true); // enemy pops in with appear animation
+        }, 350);
+        return () => clearTimeout(timer);
+      }
     }
   }, [phase, current]);
 

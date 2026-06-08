@@ -138,16 +138,25 @@ Hero must keep normal full size during arena staging and battle walking. Only th
 
 ## Battle Movement Rule
 
-All battle movement happens inside the arena only. Before each question, Miti and the enemy move quickly for ~1 second into battle positions, then the question appears. During this staging period (~1050ms), the contact trigger is blocked so the question cannot open early. Miti walks in from the left edge (x≈11→35), enemy charges in from the right edge at 2.5× normal speed. After staging ends, normal AI and player control resume.
+**Two-phase staging system (CANONICAL — DO NOT revert, fixed 2026-06-08):**
 
-**Arena staging rules (DO NOT break these):**
-- Miti and enemy must ALWAYS stay FULLY inside the arena — never start outside or clipped
-- x=11 is the leftmost valid start position (sprite half-width 63px keeps it inside at all screen sizes)
-- At battle start, both move quickly inside the arena for ~1 second (staging window = 1050ms)
-- Miti starts at x=11 (left edge, inside) and walks to x=35 at MOVE_SPEED×1.3 (~0.54s of visible movement)
-- Enemy starts at x=82–94 (right edge, inside) and charges in at 2.5× normal speed
-- Question panel appears ONLY after staging ends (both characters in position)
-- Miti should visibly walk in — not barely slide
+### First question only (hasEnteredArenaRef.current === false):
+Full cinematic entry — hero walks in from x=11 to x=35, enemy is hidden. After 1050ms both are in position, enemy pops in with `enemy-appear` animation. `hasEnteredArenaRef` is set true permanently for the session.
+
+### Q2+ (hasEnteredArenaRef.current === true):
+Hero STAYS in battle position (no walk reset). Only the enemy re-enters: hidden for 350ms, then pops in from the right with `enemy-appear`. `stagingRef=true` blocks contact during the 350ms. `isStagingActive=false` so hero does NOT play the walk animation.
+
+**Key rules:**
+- `hasEnteredArenaRef` is a `useRef(false)` inside `ArenaPageContent` — resets on component unmount (new session)
+- First staging window: 1050ms. Q2+ blocking window: 350ms.
+- Hero starts at x=11 on first entry only. `heroPosRef` is NOT reset on Q2+.
+- Enemy ALWAYS spawns from the RIGHT side (x=88–92) for ALL variants — no random side selection:
+  - goblin: x=88–92, y=65–70
+  - bat: x=88–92, y=12–20
+  - giant: x=88–92, y=45–55
+  - wizard: x=88–92, y=30–45
+- Enemy charges toward hero at 2.5× speed during staging (`stagingBoost = 2.5` when `stagingRef.current`)
+- Question panel appears ONLY after staging ends (contact blocked while `stagingRef.current === true`)
 
 Arena: `app/child/arena/page.tsx`
 
