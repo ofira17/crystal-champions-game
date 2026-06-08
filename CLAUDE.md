@@ -141,7 +141,7 @@ Hero must keep normal full size during arena staging and battle walking. Only th
 **Two-phase staging system (CANONICAL — DO NOT revert, fixed 2026-06-08):**
 
 ### First question only (hasEnteredArenaRef.current === false):
-Full cinematic entry — hero walks in from x=11 to x=35, enemy is hidden. After 1050ms both are in position, enemy pops in with `enemy-appear` animation. `hasEnteredArenaRef` is set true permanently for the session.
+Full cinematic entry — hero walks in from x=3 to x=35 (entering from far left edge), enemy is hidden. After 1050ms both are in position, enemy pops in with `enemy-appear` animation. `hasEnteredArenaRef` is set true permanently for the session.
 
 ### Q2+ (hasEnteredArenaRef.current === true):
 Hero STAYS in battle position (no walk reset). Only the enemy re-enters: hidden for 350ms, then pops in from the right with `enemy-appear`. `stagingRef=true` blocks contact during the 350ms. `isStagingActive=false` so hero does NOT play the walk animation.
@@ -149,20 +149,22 @@ Hero STAYS in battle position (no walk reset). Only the enemy re-enters: hidden 
 **Key rules:**
 - `hasEnteredArenaRef` is a `useRef(false)` inside `ArenaPageContent` — resets on component unmount (new session)
 - First staging window: 1050ms. Q2+ blocking window: 350ms.
-- Hero starts at x=11 on first entry only. `heroPosRef` is NOT reset on Q2+.
-- Enemy ALWAYS spawns from the RIGHT side (x=88–92) for ALL variants — no random side selection:
-  - goblin: x=88–92, y=65–70
-  - bat: x=88–92, y=12–20
-  - giant: x=88–92, y=45–55
-  - wizard: x=88–92, y=30–45
+- Hero starts at x=3 on first entry only (far left, dramatic entry). `heroPosRef` is NOT reset on Q2+.
+- **After enemy becomes visible, contact is blocked for 700ms (lastContactRef.current = performance.now() + 300, plus 400ms debounce = 700ms total).** This ensures child sees the face-off before the question opens.
+- **LOCK_DIST = 22** (arena-% units) — question fires only when enemy is within 22% of hero, not at 40% (was too far away, causing instant question).
+- Enemy ALWAYS spawns from the RIGHT side at FIXED positions — no random jitter:
+  - goblin: x=90, y=67
+  - bat: x=90, y=16
+  - giant: x=90, y=50
+  - wizard: x=90, y=37
 - Enemy charges toward hero at 2.5× speed during staging (`stagingBoost = 2.5` when `stagingRef.current`)
-- Question panel appears ONLY after staging ends (contact blocked while `stagingRef.current === true`)
+- Question panel appears ONLY after staging ends AND grace period expires
 
 Arena: `app/child/arena/page.tsx`
 
 **Character positioning:**
-- Hero (Miti) starts at x=35 (battle position, left side of arena), y=min(60, yMaxPct); enters from x=11. HERO_BATTLE_Y=60 is a soft target — it is clamped to yMaxPct=(ah-212-6)/ah×100 so Miti never clips below the arena on small screens.
-- Goblin enemy spawns at x=82–94 (right side)
+- Hero starts at x=3 (far left, partially off-screen) and walks to x=35 (battle position) at MOVE_SPEED*0.90/frame. Enters from first question only. HERO_BATTLE_Y=60 is a soft target — clamped to yMaxPct=(ah-212-6)/ah×100 so hero never clips below the arena on small screens.
+- Goblin enemy spawns at x=90 (fixed right side)
 - Hero always uses left/right profile sprites — never `attack-front.png` or `attack-back.png`
 - Hero idle and attack sprites are chosen based on enemy.x vs hero.x (left = `idle-left` / `attack-left`, right = `idle-right` / `attack-right`)
 - Enemy facing: `enemyX > heroX` → face left (toward hero). Sprites are FRONT-FACING PNGs — a CSS `perspective(300px) rotateY(-40deg)` 3D transform is applied in `CrystalEnemy.tsx` to simulate a side/profile view. Never remove this transform or the enemy will appear front-facing.

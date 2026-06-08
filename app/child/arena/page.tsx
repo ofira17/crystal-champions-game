@@ -1261,18 +1261,18 @@ function ArenaPageContent() {
       lastContactRef.current = 0;
       setEnemyDissolving(false);
 
-      // Enemy ALWAYS enters from the RIGHT side — consistent across all variants and all questions.
+      // Enemy ALWAYS enters from the RIGHT side — fixed position, no random jitter.
       const v = enemyVariantRef.current;
       let ex: number, ey: number;
       if (v === "bat") {
-        ex = 88 + Math.random() * 4; ey = 12 + Math.random() * 8;
+        ex = 90; ey = 16;
       } else if (v === "giant") {
-        ex = 88 + Math.random() * 4; ey = 45 + Math.random() * 10;
+        ex = 90; ey = 50;
       } else if (v === "wizard") {
-        ex = 88 + Math.random() * 4; ey = 30 + Math.random() * 15;
+        ex = 90; ey = 37;
       } else {
         // goblin — ground level, right side
-        ex = 88 + Math.random() * 4; ey = 65 + Math.random() * 5;
+        ex = 90; ey = 67;
       }
       enemyStateRef.current.x = ex;
       enemyStateRef.current.y = ey;
@@ -1291,15 +1291,17 @@ function ArenaPageContent() {
         stagingRef.current = true;
         setEnemyVisible(false);
         setIsStagingActive(true);
-        heroPosRef.current = { x: 11, y: HERO_BATTLE_Y };
-        heroPosForAiRef.current = { x: 11, y: HERO_BATTLE_Y };
-        setHeroPos({ x: 11, y: HERO_BATTLE_Y });
+        heroPosRef.current = { x: 3, y: HERO_BATTLE_Y };
+        heroPosForAiRef.current = { x: 3, y: HERO_BATTLE_Y };
+        setHeroPos({ x: 3, y: HERO_BATTLE_Y });
         setHeroFacingLeft(false);
         heroFacingLeftRef.current = false;
         const stagingTimer = setTimeout(() => {
           stagingRef.current = false;
           setIsStagingActive(false);
           setEnemyVisible(true); // enemy pops in dramatically after hero walks into position
+          // Grace: block contact for 700ms so child sees the face-off before question opens
+          lastContactRef.current = performance.now() + 300;
         }, 1050);
         return () => clearTimeout(stagingTimer);
       } else {
@@ -1311,6 +1313,8 @@ function ArenaPageContent() {
         const timer = setTimeout(() => {
           stagingRef.current = false;
           setEnemyVisible(true); // enemy pops in with appear animation
+          // Grace: block contact for 700ms so child sees the face-off before question opens
+          lastContactRef.current = performance.now() + 300;
         }, 350);
         return () => clearTimeout(timer);
       }
@@ -1507,7 +1511,7 @@ function ArenaPageContent() {
       // Lock trigger — fires as soon as the enemy enters detection range (beam lock).
       // No body collision required: range is 40 arena-% units so the question opens
       // the moment the enemy approaches, well before physical contact.
-      const LOCK_DIST = 40;
+      const LOCK_DIST = 22;
       if (phase === "battle" && !stagingRef.current && age > 0.5) {
         if (dist <= LOCK_DIST && now - lastContactRef.current > 400) {
           lastContactRef.current = now;
@@ -1568,7 +1572,7 @@ function ArenaPageContent() {
           setEnemyVisible(true);
         } else {
           if (x < HERO_BATTLE_X - 0.3) {
-            x = Math.min(x + MOVE_SPEED * 0.75, HERO_BATTLE_X);
+            x = Math.min(x + MOVE_SPEED * 0.90, HERO_BATTLE_X);
             y = Math.min(HERO_BATTLE_Y, yMaxPct);
             moved = true;
             goingLeft = false;
