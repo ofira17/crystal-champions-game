@@ -1555,20 +1555,27 @@ function ArenaPageContent() {
 
       // During staging: auto-walk right; player can take over immediately with D-pad/keys
       const playerMoving = k.size > 0 || d.size > 0;
-      if (stagingRef.current && !playerMoving) {
-        if (x < HERO_BATTLE_X - 0.3) {
-          x = Math.min(x + MOVE_SPEED * 0.75, HERO_BATTLE_X);
-          y = Math.min(HERO_BATTLE_Y, yMaxPct);
-          moved = true;
-          goingLeft = false;
-          heroPosRef.current = { x, y };
-          heroPosForAiRef.current = { x, y };
-          setHeroPos({ x, y });
+      if (stagingRef.current) {
+        if (playerMoving) {
+          // Player takes control — end staging immediately so enemy appears and contact fires
+          stagingRef.current = false;
+          setIsStagingActive(false);
+          setEnemyVisible(true);
+        } else {
+          if (x < HERO_BATTLE_X - 0.3) {
+            x = Math.min(x + MOVE_SPEED * 0.75, HERO_BATTLE_X);
+            y = Math.min(HERO_BATTLE_Y, yMaxPct);
+            moved = true;
+            goingLeft = false;
+            heroPosRef.current = { x, y };
+            heroPosForAiRef.current = { x, y };
+            setHeroPos({ x, y });
+          }
+          if (moved !== isHeroMovingRef.current) { isHeroMovingRef.current = moved; setIsHeroMoving(moved); }
+          if (goingLeft !== heroFacingLeftRef.current) { heroFacingLeftRef.current = goingLeft; setHeroFacingLeft(goingLeft); }
+          rafRef.current = requestAnimationFrame(tick);
+          return;
         }
-        if (moved !== isHeroMovingRef.current) { isHeroMovingRef.current = moved; setIsHeroMoving(moved); }
-        if (goingLeft !== heroFacingLeftRef.current) { heroFacingLeftRef.current = goingLeft; setHeroFacingLeft(goingLeft); }
-        rafRef.current = requestAnimationFrame(tick);
-        return;
       }
 
       let dx = 0, dy = 0;
