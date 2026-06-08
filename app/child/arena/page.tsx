@@ -2161,6 +2161,12 @@ function ArenaPageContent() {
         .hero-staging-walk { animation: hero-running-bob 0.24s ease-in-out infinite; }
         /* Subtle idle bob/sway when standing still — never overrides dash/recoil */
         .hero-idle-bob    { animation: hero-idle-bob 2.6s ease-in-out infinite; }
+        /* Battle-ready stance during challenge/shooting/feedback — steady charge pulse */
+        .hero-battle-ready { animation: hero-battle-ready-pulse 0.7s ease-in-out infinite alternate; }
+        @keyframes hero-battle-ready-pulse {
+          0%   { transform: translateY(-4px) scale(1.04); }
+          100% { transform: translateY(0px)  scale(1.00); }
+        }
         @keyframes hero-idle-bob {
           0%,100% { transform: translateY(0px)   rotate(0deg);   }
           25%     { transform: translateY(-3px)  rotate(-0.6deg); }
@@ -2825,7 +2831,9 @@ function ArenaPageContent() {
                   ? "hero-staging-walk"
                   : (isHeroMoving && phase === "battle")
                   ? "hero-running-bob"
-                  : (!isAttacking ? "hero-idle-bob" : "")
+                  : (phase === "challenge" || phase === "shooting" || phase === "feedback")
+                  ? "hero-battle-ready"
+                  : "hero-idle-bob"
               }
               style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}
             >
@@ -2839,8 +2847,8 @@ function ArenaPageContent() {
                   height: 190, width: "auto", display: "block",
                   transform: (isAttacking || phase === "challenge" || phase === "shooting" || phase === "feedback")
                     ? heroFacingLeft
-                      ? "perspective(600px) scale(1.22) translateY(-8px) rotateY(-35deg)"
-                      : "perspective(600px) scale(1.22) translateY(-8px) rotateY(35deg)"
+                      ? "perspective(600px) scale(1.28) translateY(-12px) rotateY(-40deg)"
+                      : "perspective(600px) scale(1.28) translateY(-12px) rotateY(40deg)"
                     : (isStagingActive || (isHeroMoving && phase === "battle"))
                     ? heroFacingLeft
                       ? "perspective(600px) scale(1.35) rotateY(-35deg)"
@@ -2851,11 +2859,13 @@ function ArenaPageContent() {
                   transformOrigin: (isStagingActive || (isHeroMoving && phase === "battle"))
                     ? "bottom center"
                     : "center center",
-                  filter: isAttacking
-                    ? "drop-shadow(0 0 22px rgba(34,211,238,1)) drop-shadow(0 0 10px white) brightness(1.3)"
-                    : phase === "feedback" && feedback?.isCorrect
-                      ? "drop-shadow(0 0 20px rgba(34,211,238,0.9)) drop-shadow(0 0 8px white)"
-                      : "drop-shadow(0 0 12px rgba(139,92,246,0.7))",
+                  filter: (phase === "challenge" || phase === "shooting" || phase === "feedback")
+                    ? isAttacking
+                      ? "drop-shadow(0 0 28px rgba(34,211,238,1)) drop-shadow(0 0 14px white) brightness(1.5)"
+                      : phase === "feedback" && feedback?.isCorrect
+                        ? "drop-shadow(0 0 22px rgba(34,211,238,0.95)) drop-shadow(0 0 10px white) brightness(1.35)"
+                        : "drop-shadow(0 0 18px rgba(34,211,238,0.85)) drop-shadow(0 0 8px rgba(167,139,250,0.7)) brightness(1.2)"
+                    : "drop-shadow(0 0 12px rgba(139,92,246,0.7))",
                   transition: isAttacking ? "transform 0.1s ease-out, filter 0.1s ease-out" : "transform 0.15s ease-out, filter 0.3s ease",
                   imageRendering: "auto",
                 }}
