@@ -61,8 +61,9 @@ C:\Users\97253\Desktop\קלוד\crystal-champions\.claude\settings.local.json
 
 ### Entry sequence
 1. Miti auto-walks into arena first (staging ~1050ms, x=11→35). Enemy is hidden (`opacity:0` on enemyRef div).
-2. When staging ends, enemy SUDDENLY appears inside the arena with a pop animation (`enemy-appear 0.55s`). The enemy AI runs during staging at 2.5× speed so it is already well inside the arena when it becomes visible.
+2. When staging ends, enemy slides in from the right with a bounce-settle animation (`enemy-appear 0.60s`, translateX 70px→0 + scale). The enemy AI runs during staging at 2.5× speed so it is already positioned on the right side when it becomes visible.
 3. Enemy starts at 100% size (full `dynEnemySize` px).
+4. For Q2+ transitions: `setEnemyVisible(false)` is called before `setPhase("battle")` to prevent the old enemy from flashing briefly before the new one enters.
 
 ### Size shrink on correct answers
 - **NEVER use CSS `transform: scale()` for HP-based sizing** — `overflow: hidden` clips scaled content. Drive size via `width`/`height` directly on the inner div.

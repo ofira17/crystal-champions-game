@@ -1686,9 +1686,10 @@ function ArenaPageContent() {
       setHeroAnim("dash");
       await wait(130);
 
-      // 3. Hero recoils — projectile launches simultaneously.
+      // 3. Hero recoils into attack lunge — projectile launches simultaneously.
       // Hero faces the enemy: mirror sprite based on enemy-x vs hero-x.
       setHeroAnim("recoil");
+      setIsAttacking(true); // lunge/shoot pose while projectile is in flight
       if (arenaRef.current) {
         const aw = arenaRef.current.offsetWidth;
         const ah = arenaRef.current.offsetHeight;
@@ -1715,6 +1716,7 @@ function ArenaPageContent() {
       setProjectileHit(true);
       await wait(160);
       setHeroAnim("idle");
+      setIsAttacking(false); // release attack pose after recoil settles
 
       // 4. Projectile travels — await server response during this window.
       // Promise.all ensures we wait at least 310 ms AND for the server result.
@@ -1821,6 +1823,7 @@ function ArenaPageContent() {
       } else if (res.allAnswered) {
         setPhase("end");
       } else {
+        setEnemyVisible(false); // hide current enemy immediately so no flash before new one enters
         setCurrent(prev => prev + 1);
         setPhase("battle");
       }
@@ -2128,14 +2131,14 @@ function ArenaPageContent() {
     >
       {/* All arena animation keyframes and classes */}
       <style>{`
-        /* ── Enemy sudden appearance ── */
+        /* ── Enemy entrance: slides in from right, bounces slightly, settles ── */
         @keyframes enemy-appear {
-          0%   { transform: scale(0.05); opacity: 0; filter: brightness(6) saturate(0); }
-          45%  { transform: scale(1.18); opacity: 1; filter: brightness(2.5); }
-          70%  { transform: scale(0.92); filter: brightness(1.4); }
-          100% { transform: scale(1);   filter: brightness(1); }
+          0%   { transform: translateX(70px) scale(0.25); opacity: 0; filter: brightness(6) saturate(0); }
+          50%  { transform: translateX(-10px) scale(1.14); opacity: 1; filter: brightness(2.5); }
+          75%  { transform: translateX(5px) scale(0.93); filter: brightness(1.4); }
+          100% { transform: translateX(0px) scale(1); opacity: 1; filter: brightness(1); }
         }
-        .enemy-appear-anim { animation: enemy-appear 0.55s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+        .enemy-appear-anim { animation: enemy-appear 0.60s cubic-bezier(0.34,1.56,0.64,1) forwards; }
 
         /* ── Enemy dissolve (white fade-out) ── */
         @keyframes enemy-dissolve {
