@@ -2885,37 +2885,7 @@ function ArenaPageContent() {
           </div>
         )}
 
-        {/* ── D-pad (always visible during arena) ── */}
-        {(phase === "battle" || phase === "challenge" || phase === "shooting" || phase === "feedback") && (
-          <div onClick={e => e.stopPropagation()} style={{ position: "absolute", bottom: 160, left: 12, zIndex: 15, userSelect: "none", touchAction: "none" }}>
-            {([
-              { dir: "up",    label: "▲", top:  0, left: 44 },
-              { dir: "left",  label: "◀", top: 44, left:  0 },
-              { dir: "right", label: "▶", top: 44, left: 88 },
-              { dir: "down",  label: "▼", top: 88, left: 44 },
-            ] as const).map(({ dir, label, top, left }) => (
-              <div
-                key={dir}
-                style={{
-                  position: "absolute", top, left,
-                  width: 40, height: 40,
-                  background: "rgba(120,60,220,0.45)",
-                  border: "1.5px solid rgba(192,132,252,0.5)",
-                  borderRadius: 10,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 18, color: "rgba(255,255,255,0.85)",
-                  cursor: "pointer", touchAction: "none",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
-                }}
-                onPointerDown={e => { e.preventDefault(); dpadRef.current.add(dir); }}
-                onPointerUp={() => dpadRef.current.delete(dir)}
-                onPointerLeave={() => dpadRef.current.delete(dir)}
-              >
-                {label}
-              </div>
-            ))}
-          </div>
-        )}
+{/* D-pad moved to fixed overlay below */}
 
         {/* ── Mega button — beside hero feet (right side, or left if near right edge) ── */}
         {(phase === "battle" || phase === "megahit") && (() => {
@@ -3036,6 +3006,39 @@ function ArenaPageContent() {
       {/* ── Feedback bar — BELOW arena, compact, never covers battle ── */}
       {phase === "feedback" && feedback && (
         <FeedbackOverlay result={feedback} energyBefore={feedbackEnergyBefore} />
+      )}
+
+      {/* ── D-pad — fixed overlay so it's never clipped by the arena's overflow:hidden ── */}
+      {(phase === "battle" || phase === "challenge" || phase === "shooting" || phase === "feedback") && (
+        <div style={{ position: "fixed", bottom: 24, left: 16, zIndex: 50, userSelect: "none", touchAction: "none", width: 128, height: 128 }}>
+          {([
+            { dir: "up",    label: "▲", top:  0, left: 44 },
+            { dir: "left",  label: "◀", top: 44, left:  0 },
+            { dir: "right", label: "▶", top: 44, left: 88 },
+            { dir: "down",  label: "▼", top: 88, left: 44 },
+          ] as const).map(({ dir, label, top, left }) => (
+            <div
+              key={dir}
+              style={{
+                position: "absolute", top, left,
+                width: 40, height: 40,
+                background: "rgba(120,60,220,0.55)",
+                border: "1.5px solid rgba(192,132,252,0.6)",
+                borderRadius: 10,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 18, color: "rgba(255,255,255,0.9)",
+                cursor: "pointer", touchAction: "none",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.45)",
+              }}
+              onPointerDown={e => { e.preventDefault(); dpadRef.current.add(dir); }}
+              onPointerUp={() => dpadRef.current.delete(dir)}
+              onPointerLeave={() => dpadRef.current.delete(dir)}
+              onPointerCancel={() => dpadRef.current.delete(dir)}
+            >
+              {label}
+            </div>
+          ))}
+        </div>
       )}
 
     </main>
