@@ -1530,7 +1530,7 @@ function ArenaPageContent() {
 
   // ── Movement RAF loop ──────────────────────────────────────────────────────
   useEffect(() => {
-    if (phase !== "battle") {
+    if (phase !== "battle" && phase !== "challenge" && phase !== "shooting" && phase !== "feedback") {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
       return;
@@ -1553,8 +1553,9 @@ function ArenaPageContent() {
       const yMinPct = (6 / ah) * 100;
       const yMaxPct = Math.max(yMinPct + 10, ((ah - heroH - 6) / ah) * 100);
 
-      // During staging: hero auto-walks right to battle position, ignore player input
-      if (stagingRef.current) {
+      // During staging: auto-walk right; player can take over immediately with D-pad/keys
+      const playerMoving = k.size > 0 || d.size > 0;
+      if (stagingRef.current && !playerMoving) {
         if (x < HERO_BATTLE_X - 0.3) {
           x = Math.min(x + MOVE_SPEED * 0.75, HERO_BATTLE_X);
           y = Math.min(HERO_BATTLE_Y, yMaxPct);
@@ -2877,8 +2878,8 @@ function ArenaPageContent() {
           </div>
         )}
 
-        {/* ── D-pad (battle phase only, bottom-left of arena) ── */}
-        {phase === "battle" && (
+        {/* ── D-pad (always visible during arena) ── */}
+        {(phase === "battle" || phase === "challenge" || phase === "shooting" || phase === "feedback") && (
           <div onClick={e => e.stopPropagation()} style={{ position: "absolute", bottom: 160, left: 12, zIndex: 15, userSelect: "none", touchAction: "none" }}>
             {([
               { dir: "up",    label: "▲", top:  0, left: 44 },
