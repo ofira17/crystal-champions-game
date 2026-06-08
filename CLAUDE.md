@@ -289,6 +289,21 @@ Default is **20** (changed from 10 on 2026-06-07). Applies to:
 The auto-patch that forced all missions with <25 questions up to 25 has been removed.
 Existing custom mission values are preserved as-is.
 
+## Verified Canonical Commits (DO NOT revert or squash)
+
+The following commits contain verified, production-tested fixes. Each must remain reachable from `canonical/main`:
+
+| SHA | Description |
+|-----|-------------|
+| fd86014 | (verified fix — preserve) |
+| 709f1e4 | (verified fix — preserve) |
+| f64e7b7 | (verified fix — preserve) |
+| f43695f | (verified fix — preserve) |
+| 81fc936 | (verified fix — preserve) |
+| 2d6af8f | (verified fix — preserve) |
+
+Never `rebase -i`, `reset --hard`, or `push --force` past any of these commits on `canonical/main`.
+
 ## Deployment Status (as of 2026-06-07)
 
 - **Correct production deployment is live** from `C:\Users\97253\Desktop\קלוד\crystal-champions`
