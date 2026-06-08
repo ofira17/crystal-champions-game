@@ -2882,10 +2882,10 @@ function ArenaPageContent() {
                   height: 190, width: "auto", display: "block",
                   transform: isAttacking
                     ? heroFacingLeft
-                      // Shooting LEFT: body tilts left, arm punches out left
-                      ? "scale(1.55) translateX(-36px) translateY(-12px) rotateZ(12deg) skewX(-8deg)"
-                      // Shooting RIGHT: body tilts right, arm punches out right
-                      : "scale(1.55) translateX(36px) translateY(-12px) rotateZ(-12deg) skewX(8deg)"
+                      // Shooting LEFT: side-facing lunge toward enemy on the left
+                      ? "perspective(600px) scale(1.35) translateY(-18px) translateX(-22px) rotateY(-45deg) rotateZ(6deg)"
+                      // Shooting RIGHT: side-facing lunge toward enemy on the right
+                      : "perspective(600px) scale(1.35) translateY(-18px) translateX(22px) rotateY(45deg) rotateZ(-6deg)"
                     : (phase === "challenge" || phase === "shooting" || phase === "feedback")
                     ? heroFacingLeft
                       // Battle-ready duel stance LEFT
