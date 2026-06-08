@@ -145,9 +145,10 @@ Hero must keep normal full size during arena staging and battle walking. Only th
 Enemy always enters from the RIGHT side of the arena (x≈90%) and approaches the hero at x≈35% (LEFT side).
 
 **Sprite selection in `CrystalEnemy.tsx`:**
-- Entry/approach (x > 55%): `-2.png` (side-view movement frame)
-- Battle stance (x ≤ 55%): `-1.png` (idle combat frame, facing hero)
-- Attacking: `-5.png`
+- Entry/approach (x > 55%): `-2.png` (side-view movement frame, right-facing)
+- Battle stance (x ≤ 55%): `-3.png` (idle combat frame, left-facing toward hero)
+- Front/special: `-1.png`
+- No `-5.png` frames.
 
 **Facing direction — CANONICAL:**
 - `shouldFaceLeft = (enemyX > heroX)` — enemy must face LEFT when it is to the RIGHT of the hero.
@@ -441,12 +442,13 @@ Local Gilad PNGs were always RGBA (correct). Production CDN served stale RGB (wh
 - The enemy's appear animation replays on each change via `key={shown-${enemyIndex}}`.
 
 ### Asset Convention
-Each enemy has 3 directional sprites per slug:
-- `{slug}-1.png` — idle / facing hero (left-facing combat position)
-- `{slug}-2.png` — side-approach sprite (enemy entering from right side)
-- `{slug}-5.png` — attack pose
+Each enemy has 3 directional sprites named by variant (e.g. `prisma-1.png`):
+- `{variant}-1.png` — front-facing / special state
+- `{variant}-2.png` — side-approach sprite (enemy entering from right side)
+- `{variant}-3.png` — battle stance (left-facing toward hero)
+- No `-5.png` frames exist or are used.
 
-Slug-to-variant mapping lives in `VARIANT_META` in `components/child/CrystalEnemy.tsx`. Update it when real crystal art is delivered.
+All sprites MUST be RGBA PNGs with a real transparent background (alpha channel). Never use RGB PNGs or sprites with baked checkerboard/solid backgrounds — they will not blend into the crystal arena.
 
 ### Side-Angle Rule
 Enemies always enter from `x=90%` and face left toward the hero. CSS `perspective(300px) rotateY(-40deg)` is applied when `enemyX > heroX`. `enemyAngle` is auto-derived from position: `x > 55%` → "right" (approach sprite), else "left" (idle sprite). Never use front-facing sprites as the primary battle view.
@@ -454,3 +456,13 @@ Enemies always enter from `x=90%` and face left toward the hero. CSS `perspectiv
 ### Do NOT change
 - Question count (20), grade rules, rewards, Supabase, auth, or Vercel config.
 - The worldId hash is no longer used for enemy selection — do not restore it.
+
+## Asset Transparency Rule (MANDATORY)
+
+All enemy PNG sprites in `public/enemies/` MUST be RGBA (mode=RGBA, color type 6).
+- Real transparent background — alpha channel present on every background pixel.
+- Never accept or commit RGB PNGs (no alpha channel) — they display solid/white backgrounds in the arena.
+- Never accept sprites with baked-in checkerboard, gray, or white background pixels.
+- To verify: `python -c "from PIL import Image; img=Image.open('file.png'); print(img.mode)"` — must print `RGBA`.
+- If a new PNG is RGB, remove its background (flood-fill from corners + threshold) before committing.
+- Sprite filename convention: `{variant}-1.png` (front), `{variant}-2.png` (right/approach), `{variant}-3.png` (left/battle). No `-5` frames.

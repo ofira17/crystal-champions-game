@@ -17,17 +17,16 @@ export function getEnemyVariant(_worldId: string | null): EnemyVariant {
   return "prisma";
 }
 
-// Each enemy maps to an existing asset slug until dedicated crystal art is delivered.
 // spawnY: default y% position when entering from the right side of the arena.
 const VARIANT_META: Record<
   EnemyVariant,
-  { nameHe: string; nameEn: string; glow: string; size: number; slug: string; spawnY: number }
+  { nameHe: string; nameEn: string; glow: string; size: number; spawnY: number }
 > = {
-  prisma: { nameHe: "פריזמה", nameEn: "Crystal Butterfly", glow: "rgba(103,232,249,0.85)", size: 300, slug: "question-goblin",   spawnY: 67 },
-  orion:  { nameHe: "אוריון",  nameEn: "Crystal Owl",       glow: "rgba(251,191,36,0.85)",  size: 340, slug: "mistake-bat",       spawnY: 18 },
-  luma:   { nameHe: "לומה",   nameEn: "Crystal Bird",      glow: "rgba(147,197,253,0.85)", size: 360, slug: "memory-giant",     spawnY: 28 },
-  gembo:  { nameHe: "גמבו",   nameEn: "Crystal Turtle",    glow: "rgba(74,222,128,0.85)",  size: 380, slug: "confusion-wizard", spawnY: 60 },
-  bubli:  { nameHe: "בובלי",  nameEn: "Crystal Slime",     glow: "rgba(232,121,249,0.85)", size: 320, slug: "question-goblin",  spawnY: 72 },
+  prisma: { nameHe: "פריזמה", nameEn: "Crystal Butterfly", glow: "rgba(103,232,249,0.85)", size: 300, spawnY: 67 },
+  orion:  { nameHe: "אוריון",  nameEn: "Crystal Owl",       glow: "rgba(251,191,36,0.85)",  size: 340, spawnY: 18 },
+  luma:   { nameHe: "לומה",   nameEn: "Crystal Bird",      glow: "rgba(147,197,253,0.85)", size: 360, spawnY: 28 },
+  gembo:  { nameHe: "גמבו",   nameEn: "Crystal Turtle",    glow: "rgba(74,222,128,0.85)",  size: 380, spawnY: 60 },
+  bubli:  { nameHe: "בובלי",  nameEn: "Crystal Slime",     glow: "rgba(232,121,249,0.85)", size: 320, spawnY: 72 },
 };
 
 export function getEnemyName(_worldId: string | null): string {
@@ -40,7 +39,7 @@ export function getEnemyNameByVariant(variant: EnemyVariant): string {
 
 export function getEnemyMeta(variant: EnemyVariant) {
   const m = VARIANT_META[variant];
-  return { ...m, src: `/enemies/${m.slug}-1.png` };
+  return { ...m, src: `/enemies/${variant}-1.png` };
 }
 
 /** Returns the default spawn Y% for this variant. */
@@ -101,16 +100,16 @@ export function CrystalEnemy({
       ? enemyX > 55 ? "right" : "left"
       : (((facingDeg % 360) + 360) % 360 <= 180 ? "right" : "left"));
 
-  // Select sprite based on angle and action:
-  //   attacking       → -5.png  (attack pose)
-  //   entry approach  → -2.png  (side-view movement frame)
-  //   battle stance   → -1.png  (idle combat frame, facing hero)
-  //   front (special) → -1.png  (fallback)
-  const src = attacking
-    ? `/enemies/${meta.slug}-5.png`
-    : derivedAngle === "right"
-    ? `/enemies/${meta.slug}-2.png`
-    : `/enemies/${meta.slug}-1.png`;
+  // Sprite selection:
+  //   right (entry approach) → -2.png
+  //   left  (battle stance)  → -3.png
+  //   front / attacking      → -1.png
+  const src =
+    derivedAngle === "right"
+      ? `/enemies/${v}-2.png`
+      : derivedAngle === "left"
+      ? `/enemies/${v}-3.png`
+      : `/enemies/${v}-1.png`;
 
   // Facing logic:
   //   Enemy spawns at x≈90 (right), hero at x≈35 (left).
