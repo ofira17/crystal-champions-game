@@ -389,3 +389,36 @@ Local Gilad PNGs were always RGBA (correct). Production CDN served stale RGB (wh
 **Fix:** Create versioned filenames `gilad_v2_01.png ... gilad_v2_16.png` (copies of RGBA originals) and update `GILAD_IMAGES` in `components/child/HeroDisplay.tsx` to reference the new names. Old files kept but not referenced.
 
 **Rule:** If production serves stale assets after a PNG replacement, do NOT reuse the old filename — create versioned copies (e.g., `_v2_`) and update all references. CDN cache is busted automatically because new URLs have no cache entry.
+
+## Enemy Rotation Rule (FIXED 2026-06-08)
+
+### The 5 Crystal Enemies (in order)
+| # | Name   | English        | Hebrew  |
+|---|--------|----------------|---------|
+| 0 | Prisma | Crystal Butterfly | פריזמה |
+| 1 | Orion  | Crystal Owl    | אוריון  |
+| 2 | Luma   | Crystal Bird   | לומה   |
+| 3 | Gembo  | Crystal Turtle | גמבו   |
+| 4 | Bubli  | Crystal Slime  | בובלי  |
+
+### Rotation Logic
+- `enemyIndex` state (starts at 0) drives which enemy appears.
+- `enemyVariant = getEnemyVariantByIndex(enemyIndex)` → cycles Prisma → Orion → Luma → Gembo → Bubli → loop.
+- `enemyIndex` increments by 1 **only** when `res.isCorrect === true` (inside `handleAnswer`).
+- **Wrong answers keep the same enemy** — `enemyIndex` does NOT change.
+- The enemy's appear animation replays on each change via `key={shown-${enemyIndex}}`.
+
+### Asset Convention
+Each enemy has 3 directional sprites per slug:
+- `{slug}-1.png` — idle / facing hero (left-facing combat position)
+- `{slug}-2.png` — side-approach sprite (enemy entering from right side)
+- `{slug}-5.png` — attack pose
+
+Slug-to-variant mapping lives in `VARIANT_META` in `components/child/CrystalEnemy.tsx`. Update it when real crystal art is delivered.
+
+### Side-Angle Rule
+Enemies always enter from `x=90%` and face left toward the hero. CSS `perspective(300px) rotateY(-40deg)` is applied when `enemyX > heroX`. `enemyAngle` is auto-derived from position: `x > 55%` → "right" (approach sprite), else "left" (idle sprite). Never use front-facing sprites as the primary battle view.
+
+### Do NOT change
+- Question count (20), grade rules, rewards, Supabase, auth, or Vercel config.
+- The worldId hash is no longer used for enemy selection — do not restore it.

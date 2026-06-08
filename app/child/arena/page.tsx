@@ -16,7 +16,7 @@ import {
 } from "@/app/actions/arena";
 import { ENERGY_MAX }      from "@/lib/constants";
 import { TreasureBox }     from "@/components/child/TreasureBox";
-import { CrystalEnemy, getEnemyName, getEnemyVariant, getEnemyMeta, type EnemyVariant } from "@/components/child/CrystalEnemy";
+import { CrystalEnemy, getEnemyVariantByIndex, getEnemyNameByVariant, getEnemyMeta, getEnemySpawnY, type EnemyVariant } from "@/components/child/CrystalEnemy";
 import { getHeroImage }    from "@/components/child/HeroDisplay";
 
 // ── Phase type ────────────────────────────────────────────────────────────────
@@ -790,6 +790,8 @@ function ArenaPageContent() {
   const [arenaData,     setArenaData]    = useState<ArenaStartData | null>(null);
   const [questions,     setQuestions]    = useState<ArenaQuestion[]>([]);
   const [current,       setCurrent]      = useState(0);
+  // Tracks which enemy is active. Advances by 1 on each correct answer (cycles through 5).
+  const [enemyIndex,    setEnemyIndex]   = useState(0);
   const [answered,      setAnswered]     = useState(0);
   const [correctCount,  setCorrectCount] = useState(0);
   const [bossHp,        setBossHp]       = useState(100);
@@ -1113,9 +1115,9 @@ function ArenaPageContent() {
   }
 
   // ── Active enemy archetype (moves, faces hero, opens question on contact) ──
-  const enemyVariant: EnemyVariant = arenaData
-    ? getEnemyVariant(arenaData.worldId)
-    : "goblin";
+  // Enemy rotates in fixed order: Prisma → Orion → Luma → Gembo → Bubli → loop.
+  // Advances ONLY after a correct answer; wrong answers keep the same enemy.
+  const enemyVariant: EnemyVariant = getEnemyVariantByIndex(enemyIndex);
   const enemyVariantRef = useRef<EnemyVariant>(enemyVariant);
   useEffect(() => { enemyVariantRef.current = enemyVariant; }, [enemyVariant]);
 
@@ -1261,19 +1263,10 @@ function ArenaPageContent() {
       lastContactRef.current = 0;
       setEnemyDissolving(false);
 
-      // Enemy ALWAYS enters from the RIGHT side — fixed position, no random jitter.
+      // Enemy ALWAYS enters from the RIGHT side — fixed position per variant.
       const v = enemyVariantRef.current;
-      let ex: number, ey: number;
-      if (v === "bat") {
-        ex = 90; ey = 16;
-      } else if (v === "giant") {
-        ex = 90; ey = 50;
-      } else if (v === "wizard") {
-        ex = 90; ey = 37;
-      } else {
-        // goblin — ground level, right side
-        ex = 90; ey = 67;
-      }
+      const ex = 90;
+      const ey = getEnemySpawnY(v);
       enemyStateRef.current.x = ex;
       enemyStateRef.current.y = ey;
       enemyStateRef.current.vx = 0;
@@ -1346,25 +1339,23 @@ function ArenaPageContent() {
       // Per-archetype velocity (in arena %/sec).
       // KEEP_DIST = personal space — enemies orbit/approach but never land on the hero's body.
       const KEEP_DIST =
-        v === "giant"  ? 18 :
-        v === "bat"    ? 16 :
-        v === "wizard" ? 20 : 15;
+        v === "luma"  ? 18 :
+        v === "orion" ? 16 :
+        v === "bubli" ? 20 : 15;
       let dvx = 0, dvy = 0;
-      if (v === "goblin") {
-        // Runs along the GROUND with a hopping wobble. Y is pulled toward a ground band.
+      if (v === "prisma" || v === "gembo") {
+        // Prisma (butterfly) and Gembo (turtle): ground-level approach with hop/bounce.
         const GROUND_Y = Math.max(62, Math.min(82, hy + 6));
-        const SPEED = 20;
-        // run horizontally toward hero; vertical only nudges toward ground band
+        const SPEED = v === "gembo" ? 10 : 20;
         const dirX = Math.sign(dx) || 1;
         const approach = dist > KEEP_DIST ? 1 : -0.35;
         dvx = dirX * SPEED * approach;
-        // hop: small periodic vertical impulse, otherwise settle on ground band
         const hop = Math.sin(age * 7) * 6;
         dvy = (GROUND_Y - s.y) * 4 - Math.max(0, Math.sin(age * 7)) * hop;
         s.animPhase = Math.hypot(s.vx, s.vy) > 2 ? 1 : 0;
-      } else if (v === "bat") {
-        // Curved flying path — figure-8 style swoop that orbits the hero.
-        const SPEED = 24;
+      } else if (v === "orion" || v === "luma") {
+        // Orion (owl) and Luma (bird): curved aerial swoop that orbits the hero.
+        const SPEED = v === "luma" ? 18 : 24;
         const tangX = -uy, tangY = ux;
         const approach = dist > KEEP_DIST ? 1 : -0.4;
         const swoop = Math.sin(age * 2.6);
@@ -1372,27 +1363,14 @@ function ArenaPageContent() {
         dvx = ux * SPEED * approach + tangX * SPEED * 0.9 * swoop + curl * 3;
         dvy = uy * SPEED * approach + tangY * SPEED * 0.9 * swoop - Math.cos(age * 3.2) * 5;
         s.animPhase = Math.hypot(s.vx, s.vy) > 2 ? 1 : 0;
-      } else if (v === "giant") {
-        // Slow stomp from the side. Approach mostly horizontally, never overlap.
-        const SPEED = 7;
-        const stomping = Math.abs(Math.sin(age * 1.8)) > 0.6;
-        const kick = stomping ? 1.5 : 0.4;
-        const approach = dist > KEEP_DIST ? 1 : -0.25;
-        // Bias horizontal motion so it stomps from the side
-        dvx = Math.sign(dx || 1) * SPEED * kick * approach;
-        dvy = uy * SPEED * 0.5 * kick * approach;
-        s.animPhase = Math.hypot(s.vx, s.vy) > 1.5 ? 1 : 0;
-      } else { // wizard
-        // Teleport / dash / dodge. Always reappears at a safe distance.
+      } else { // bubli (slime): teleport / dash / dodge
         s.teleportCooldown -= dt;
         const projectileInFlight = showProjectileRef.current;
         const safeRadius = () => KEEP_DIST + 4 + Math.random() * 8;
         if (projectileInFlight && s.teleportCooldown < 0.3) {
-          // dash sideways to dodge an incoming shot
           const side = Math.random() < 0.5 ? -1 : 1;
           s.x += -uy * 16 * side;
           s.y +=  ux * 10 * side;
-          // ensure we didn't dash onto the hero
           const ndx = hx - s.x, ndy = hy - s.y;
           const nd  = Math.hypot(ndx, ndy) || 1;
           if (nd < KEEP_DIST) {
@@ -1402,7 +1380,6 @@ function ArenaPageContent() {
           s.teleportCooldown = 1.2;
           s.animPhase = 1;
         } else if (s.teleportCooldown <= 0) {
-          // teleport to a fresh angle around hero, always outside KEEP_DIST
           const ang = Math.random() * Math.PI * 2;
           const r = safeRadius();
           s.x = hx + Math.cos(ang) * r;
@@ -1410,7 +1387,6 @@ function ArenaPageContent() {
           s.teleportCooldown = 1.6 + Math.random() * 1.2;
           s.animPhase = 1;
         } else {
-          // small orbital drift between teleports
           const SPEED = 9;
           const tangX = -uy, tangY = ux;
           const approach = dist > KEEP_DIST + 4 ? 3 : -3;
@@ -1440,9 +1416,9 @@ function ArenaPageContent() {
       // Hard personal-space clamp — never let the enemy stand on the hero's body.
       // Uses the same KEEP_DIST so each archetype keeps its own comfortable distance.
       const KEEP_DIST_CLAMP =
-        v === "giant"  ? 17 :
-        v === "bat"    ? 15 :
-        v === "wizard" ? 18 : 14;
+        v === "luma"  ? 17 :
+        v === "orion" ? 15 :
+        v === "bubli" ? 18 : 14;
       if (age > 0.6) {
         const ddx = s.x - hx;
         const ddy = s.y - hy;
@@ -1466,7 +1442,7 @@ function ArenaPageContent() {
         const ah2 = arenaRef.current?.offsetHeight ?? 400;
         // Scale sprite size to arena height so enemy fills ~62% of visible arena.
         // Capped at each variant's designed max so it never looks disproportionate on large screens.
-        const VAR_MAX = v === "giant" ? 400 : v === "wizard" ? 360 : v === "bat" ? 340 : 320;
+        const VAR_MAX = getEnemyMeta(v).size;
         const eSz = Math.max(150, Math.min(VAR_MAX, Math.round(ah2 * 0.72)));
         // The enemy wrapper is flex-col: HP bar (~30px) + 4px gap + sprite (eSz px).
         // translate(-50%,-50%) centers the WHOLE column, so the sprite centre is
@@ -1818,7 +1794,11 @@ function ArenaPageContent() {
       setEnergy(res.newEnergy);
       setAnswered(prev => prev + 1);
       const newCorrect = res.isCorrect ? correctCount + 1 : correctCount;
-      if (res.isCorrect) setCorrectCount(prev => prev + 1);
+      if (res.isCorrect) {
+        setCorrectCount(prev => prev + 1);
+        // Advance to next enemy in rotation (Prisma → Orion → Luma → Gembo → Bubli → loop)
+        setEnemyIndex(prev => prev + 1);
+      }
       if (res.bossDefeated) setBossDefeated(true);
 
       setPhase("feedback");
@@ -1908,7 +1888,7 @@ function ArenaPageContent() {
 
   // ── Derived ────────────────────────────────────────────────────────────────
   const q         = questions[current];
-  const enemyName = getEnemyName(arenaData?.worldId ?? null);
+  const enemyName = getEnemyNameByVariant(enemyVariant);
 
   // ── LOADING ────────────────────────────────────────────────────────────────
   if (phase === "loading") {
@@ -2641,7 +2621,7 @@ function ArenaPageContent() {
         >
           {/* Appear/dissolve wrapper — remounts (via key) to replay appear animation each new enemy */}
           <div
-            key={enemyVisible ? "shown" : "hidden"}
+            key={enemyVisible ? `shown-${enemyIndex}` : "hidden"}
             style={{
               animation: enemyDissolving
                 ? "enemy-dissolve 0.95s ease-out forwards"
