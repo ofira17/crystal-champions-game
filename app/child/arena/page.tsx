@@ -2876,21 +2876,24 @@ function ArenaPageContent() {
                   Attack pose: forward lunge translateX + rotateZ tilt for duel illusion when no side sprite exists. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={getHeroImage(arenaData.heroGender ?? "M", arenaData.heroColorTheme ?? "default", 0)}
+                src={
+                  isAttacking
+                    ? heroFacingLeft
+                      ? "/sprites/miti/attack-left.png"
+                      : "/sprites/miti/attack-right.png"
+                    : getHeroImage(arenaData.heroGender ?? "M", arenaData.heroColorTheme ?? "default", 0)
+                }
                 alt={arenaData.heroName}
                 style={{
                   height: 190, width: "auto", display: "block",
                   transform: isAttacking
+                    // Attack sprite is already directional — just lunge slightly toward enemy
                     ? heroFacingLeft
-                      // Shooting LEFT: side-facing lunge toward enemy on the left
-                      ? "perspective(600px) scale(1.35) translateY(-18px) translateX(-22px) rotateY(-45deg) rotateZ(6deg)"
-                      // Shooting RIGHT: side-facing lunge toward enemy on the right
-                      : "perspective(600px) scale(1.35) translateY(-18px) translateX(22px) rotateY(45deg) rotateZ(-6deg)"
+                      ? "scale(1.3) translateY(-14px) translateX(-10px)"
+                      : "scale(1.3) translateY(-14px) translateX(10px)"
                     : (phase === "challenge" || phase === "shooting" || phase === "feedback")
                     ? heroFacingLeft
-                      // Battle-ready duel stance LEFT
                       ? "perspective(600px) scale(1.28) translateY(-10px) rotateY(-40deg) rotateZ(2deg)"
-                      // Battle-ready duel stance RIGHT
                       : "perspective(600px) scale(1.28) translateY(-10px) rotateY(40deg) rotateZ(-2deg)"
                     : (isStagingActive || (isHeroMoving && phase === "battle"))
                     ? heroFacingLeft
@@ -2903,7 +2906,7 @@ function ArenaPageContent() {
                     ? "bottom center"
                     : "center center",
                   filter: isAttacking
-                    ? "drop-shadow(0 0 40px rgba(34,211,238,1)) drop-shadow(0 0 20px white) drop-shadow(0 0 8px rgba(192,132,252,0.9)) brightness(2.0)"
+                    ? "drop-shadow(0 0 30px rgba(34,211,238,0.9)) drop-shadow(0 0 12px rgba(192,132,252,0.8)) brightness(1.15)"
                     : (phase === "challenge" || phase === "shooting" || phase === "feedback")
                     ? phase === "feedback" && feedback?.isCorrect
                       ? "drop-shadow(0 0 22px rgba(34,211,238,0.95)) drop-shadow(0 0 10px white) brightness(1.35)"
