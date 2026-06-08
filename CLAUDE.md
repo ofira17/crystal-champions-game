@@ -116,25 +116,56 @@ The `meta.glow` value is also used in the `dropShadow` (idle and lowHp states) �
 
 **Enemy HP bar colors** (arena/page.tsx, above enemy sprite): HP 30-60% fill MUST be purple (`#a855f7,#c084fc`) — never orange (#f97316) or yellow (#fbbf24). HP <30% fill MUST be purple-red (`#7c3aed,#ef4444`). HP <30% border/text MUST be violet (`rgba(192,132,252,0.55)` / `#c084fc`) — not yellow (#facc15) (FIXED 2026-06-07).
 
-## Hero Battle Sprite Rule (FIXED 2026-06-08)
+## Hero Battle Sprite Rule (UPDATED 2026-06-08)
 
 The arena battle character sprite MUST display the currently selected/equipped hero, not a hardcoded Miti sprite.
 
 - **Source**: `getHeroImage(arenaData.heroGender ?? "M", arenaData.heroColorTheme ?? "default", 0)` — the hero portrait image from `/heroes/`
-- **Direction (duel facing rule)**: Use CSS `rotateY` with `perspective(600px)` — same technique as `CrystalEnemy`. All hero portrait images are front-facing; `rotateY(35deg)` makes them appear to face RIGHT (toward enemy when hero is on left), `rotateY(-35deg)` makes them face LEFT. NEVER use `scaleX(-1)` alone — it only mirrors a front-facing portrait and still faces the screen.
+- **Direction (duel facing rule — CANONICAL f013c31)**: Use CSS `rotateY` with `perspective(600px)`. Hero portrait images are front-facing; `rotateY(35deg)` makes them appear to face RIGHT (toward enemy when hero is on left), `rotateY(-35deg)` makes them face LEFT. NEVER use `scaleX(-1)` alone — it only mirrors a front-facing portrait and still faces the screen.
   - Idle facing right: `"perspective(600px) rotateY(35deg)"`
   - Idle facing left: `"perspective(600px) rotateY(-35deg)"`
   - Running/staging facing right: `"perspective(600px) scale(1.35) rotateY(35deg)"`
   - Running/staging facing left: `"perspective(600px) scale(1.35) rotateY(-35deg)"`
-  - Attacking: `"perspective(600px) scale(1.18) translateY(-8px)"` (no directional flip during attack)
+  - Battle-ready duel stance right: `"perspective(600px) scale(1.28) translateY(-10px) rotateY(40deg) rotateZ(-2deg)"`
+  - Battle-ready duel stance left: `"perspective(600px) scale(1.28) translateY(-10px) rotateY(-40deg) rotateZ(2deg)"`
+  - **Attack lunge right** (isAttacking && !heroFacingLeft): `"perspective(600px) scale(1.35) translateY(-18px) translateX(22px) rotateY(45deg) rotateZ(-6deg)"` — forward-punch lunge toward enemy
+  - **Attack lunge left** (isAttacking && heroFacingLeft): `"perspective(600px) scale(1.35) translateY(-18px) translateX(-22px) rotateY(-45deg) rotateZ(6deg)"` — forward-punch lunge toward enemy
 - **No separate sprite files per state**: A single portrait image is used for all states (idle, attack, run) with CSS transforms for direction
 - Only Miti (`/sprites/miti/`) had directional sprite sheets; all heroes (default AND equipped) use the hero portrait image system with rotateY
 - Hero name/card and battle sprite must always show the same hero (consistency enforced by both reading `arenaData.heroGender`/`heroColorTheme`)
 - **DO NOT hardcode `/sprites/miti/` ever again** — all heroes go through `getHeroImage()`
 
 Hero must keep normal full size during arena staging and battle walking. Only the enemy uses HP-based shrinking.
-- `scale(1.35)` during staging/walking, `scale(1.18) translateY(-8px)` during attack — never reduce hero below 1.0 scale.
+- `scale(1.35)` during staging/walking and attack lunge, `scale(1.28)` in battle-ready duel stance — never reduce hero below 1.0 scale.
 - Do NOT apply enemy HP scaling or any staging shrink to the hero sprite.
+
+## Enemy Facing Rule (CANONICAL — 2026-06-08)
+
+Enemy always enters from the RIGHT side of the arena (x≈90%) and approaches the hero at x≈35% (LEFT side).
+
+**Sprite selection in `CrystalEnemy.tsx`:**
+- Entry/approach (x > 55%): `-2.png` (side-view movement frame)
+- Battle stance (x ≤ 55%): `-1.png` (idle combat frame, facing hero)
+- Attacking: `-5.png`
+
+**Facing direction — CANONICAL:**
+- `shouldFaceLeft = (enemyX > heroX)` — enemy must face LEFT when it is to the RIGHT of the hero.
+- For **entry sprite** (`-2.png`, `useScaleFlip = derivedAngle === "right" && shouldFaceLeft`): apply `scaleX(-1)` to mirror the sprite so it faces LEFT (toward hero). Do NOT use rotateY(±40) alone — the `-2.png` sprite faces right in the asset, so without the mirror it shows the enemy's back or wrong side.
+- Add `rotateY(-20deg)` as a subtle perspective depth tilt (in mirrored space, this creates a slight right-tilt illusion without showing the back).
+- For **battle sprite** (`-1.png`): `shouldFaceLeft` → `rotateY(-20deg)`; otherwise `rotateY(20deg)` — no scaleX flip needed.
+- **NEVER use `rotateY(±40deg)` alone on a side-profile sprite** — at 40deg the far edge bends around and can show the back of the character.
+
+## Targeting Beam Rule (CANONICAL — 2026-06-08)
+
+The crystal targeting beam in `arena/page.tsx` connects the hero's attack hand to just before the enemy body edge.
+
+**Rules:**
+- **Origin**: hero attack hand — `heroPos.x ± 40px` (right when facing right, left when facing left) + `heroPos.y + 55px` (chest height)
+- **Endpoint**: stop `38px` short of enemy center — `STOP = min(38, beamLen * 0.25)`, endpoint at `ratio = (beamLen - STOP) / beamLen` along the vector. This prevents the beam from visually entering the enemy body.
+- **Widths**: outer glow 16px at 0.12 opacity, mid glow 6px at 0.30 opacity, main beam 2.5px, bright core 1px at 0.70 opacity — thin and atmospheric, not a solid rod.
+- **Tip decoration**: a small `circle r=5` (cyan 0.55) + `circle r=2.5` (white 0.85) at the endpoint creates a soft lock-on dot at the enemy's edge.
+- **NEVER** draw beam all the way to enemy center — it visually passes through the enemy body.
+- **NEVER** use strokeWidth > 8px on any beam layer — it becomes a solid opaque bar that dominates the scene.
 
 ## Battle Movement Rule
 

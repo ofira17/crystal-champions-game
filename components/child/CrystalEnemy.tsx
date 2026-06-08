@@ -94,7 +94,7 @@ export function CrystalEnemy({
 
   // Derive angle from position if not explicitly passed.
   // Enemy always enters from x≈90% and approaches hero at x≈35%.
-  // While x > 55, it's still in "entry approach" → show right-facing sprite.
+  // While x > 55, it's still in "entry approach" → show side-view sprite.
   const derivedAngle: "front" | "right" | "left" =
     enemyAngle ??
     (enemyX !== undefined
@@ -103,8 +103,8 @@ export function CrystalEnemy({
 
   // Select sprite based on angle and action:
   //   attacking       → -5.png  (attack pose)
-  //   right approach  → -2.png  (entry/movement frame — side view approaching)
-  //   left / at rest  → -1.png  (idle combat frame — facing hero)
+  //   entry approach  → -2.png  (side-view movement frame)
+  //   battle stance   → -1.png  (idle combat frame, facing hero)
   //   front (special) → -1.png  (fallback)
   const src = attacking
     ? `/enemies/${meta.slug}-5.png`
@@ -112,15 +112,22 @@ export function CrystalEnemy({
     ? `/enemies/${meta.slug}-2.png`
     : `/enemies/${meta.slug}-1.png`;
 
-  // Apply 3D perspective rotation to simulate a side profile view.
-  // rotateY(-40deg) → faces left (toward hero when enemy is on the right).
-  // rotateY(+40deg) → faces right (entry approach from right edge).
+  // Facing logic:
+  //   Enemy spawns at x≈90 (right), hero at x≈35 (left).
+  //   shouldFaceLeft = true when enemy is to the right of hero.
+  //   For entry sprite (-2.png): mirror with scaleX(-1) so the sprite faces left toward hero.
+  //   For battle sprite (-1.png): use a subtle rotateY perspective tilt only.
+  //   Positive rotateY tips the left edge toward viewer (left-facing perspective).
   const shouldFaceLeft: boolean =
     enemyX !== undefined && heroX !== undefined
       ? enemyX > heroX
       : derivedAngle !== "right";
 
-  const rotateY = shouldFaceLeft ? -40 : 40;
+  // For the side-approach sprite (-2.png), scaleX(-1) flips the sprite to face left.
+  // For the combat sprite (-1.png), rely on rotateY perspective only.
+  const useScaleFlip = derivedAngle === "right" && shouldFaceLeft;
+  // Small rotateY gives a duel-angle illusion without showing the back.
+  const rotateY = shouldFaceLeft ? -20 : 20;
 
   const lowHp = hp <= 30;
   const dropShadow = damaged
@@ -194,7 +201,7 @@ export function CrystalEnemy({
             width: "100%",
             height: "100%",
             objectFit: "contain",
-            transform: `perspective(300px) rotateY(${rotateY}deg) translateY(${bob}px)`,
+            transform: `perspective(300px) ${useScaleFlip ? "scaleX(-1) " : ""}rotateY(${rotateY}deg) translateY(${bob}px)`,
             filter: crystalGlow,
             willChange: "transform, filter",
             userSelect: "none",

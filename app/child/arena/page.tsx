@@ -2773,42 +2773,47 @@ function ArenaPageContent() {
           </div>
         )}
 
-        {/* ── Targeting beam: Miti center → locked enemy center ── */}
+        {/* ── Targeting beam: hero hand → just before enemy body ── */}
         {(phase === "battle" || phase === "challenge") && arenaData && (() => {
           const aw = arenaRef.current?.offsetWidth  ?? 700;
           const ah = arenaRef.current?.offsetHeight ?? 400;
-          // Hero attack hand: offset right (+52) when facing right, left (-52) when facing left
+          // Hero attack hand: offset right (+40) when facing right, left (-40) when facing left
           const facingRight = enemyStateRef.current.x >= heroPos.x;
-          const handOffsetX = facingRight ? 52 : -52;
+          const handOffsetX = facingRight ? 40 : -40;
           const hx = (heroPos.x / 100) * aw + handOffsetX;
-          const hy = (heroPos.y / 100) * ah + 68; // chest/shoulder height
-          // Enemy center: AI drives x/y in arena % coords
+          const hy = (heroPos.y / 100) * ah + 55; // chest/shoulder height
+          // Enemy center
           const ex = (enemyStateRef.current.x / 100) * aw;
           const ey = (enemyStateRef.current.y / 100) * ah;
+          // Stop beam 38px short of enemy center so it doesn't pass through the body
+          const beamLen = Math.hypot(ex - hx, ey - hy) || 1;
+          const STOP = Math.min(38, beamLen * 0.25);
+          const ratio = Math.max(0, (beamLen - STOP) / beamLen);
+          const bx = hx + (ex - hx) * ratio;
+          const by = hy + (ey - hy) * ratio;
           const gradId = "aim-beam-grad";
           return (
             <svg
               style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 6, overflow: "visible" }}
             >
               <defs>
-                <linearGradient id={gradId} gradientUnits="userSpaceOnUse" x1={hx} y1={hy} x2={ex} y2={ey}>
-                  <stop offset="0%"   stopColor="#22d3ee" stopOpacity="0.55" />
-                  <stop offset="40%"  stopColor="#67e8f9" stopOpacity="1.00" />
-                  <stop offset="100%" stopColor="#f0f9ff" stopOpacity="1.00" />
+                <linearGradient id={gradId} gradientUnits="userSpaceOnUse" x1={hx} y1={hy} x2={bx} y2={by}>
+                  <stop offset="0%"   stopColor="#22d3ee" stopOpacity="0.30" />
+                  <stop offset="50%"  stopColor="#67e8f9" stopOpacity="0.65" />
+                  <stop offset="100%" stopColor="#f0f9ff" stopOpacity="0.85" />
                 </linearGradient>
-                <filter id="beam-glow-filter" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="4" result="blur" />
-                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                </filter>
               </defs>
-              {/* Outer soft glow halo */}
-              <line x1={hx} y1={hy} x2={ex} y2={ey} stroke="rgba(34,211,238,0.28)" strokeWidth="32" strokeLinecap="round" />
-              {/* Mid electric-cyan glow */}
-              <line x1={hx} y1={hy} x2={ex} y2={ey} stroke="rgba(103,232,249,0.65)" strokeWidth="14" strokeLinecap="round" />
-              {/* Main beam — solid, bright */}
-              <line x1={hx} y1={hy} x2={ex} y2={ey} stroke={`url(#${gradId})`} strokeWidth="7" strokeLinecap="round" />
-              {/* Bright white-blue core */}
-              <line x1={hx} y1={hy} x2={ex} y2={ey} stroke="rgba(240,249,255,0.95)" strokeWidth="3" strokeLinecap="round" />
+              {/* Outer soft glow halo — thinner, more transparent */}
+              <line x1={hx} y1={hy} x2={bx} y2={by} stroke="rgba(34,211,238,0.12)" strokeWidth="16" strokeLinecap="round" />
+              {/* Mid glow */}
+              <line x1={hx} y1={hy} x2={bx} y2={by} stroke="rgba(103,232,249,0.30)" strokeWidth="6" strokeLinecap="round" />
+              {/* Main beam */}
+              <line x1={hx} y1={hy} x2={bx} y2={by} stroke={`url(#${gradId})`} strokeWidth="2.5" strokeLinecap="round" />
+              {/* Bright core */}
+              <line x1={hx} y1={hy} x2={bx} y2={by} stroke="rgba(240,249,255,0.70)" strokeWidth="1" strokeLinecap="round" />
+              {/* Small spark dot at beam tip (enemy-edge impact point) */}
+              <circle cx={bx} cy={by} r={5} fill="rgba(34,211,238,0.55)" />
+              <circle cx={bx} cy={by} r={2.5} fill="rgba(255,255,255,0.85)" />
             </svg>
           );
         })()}
@@ -2834,18 +2839,27 @@ function ArenaPageContent() {
               }
               style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}
             >
-              {/* Hero sprite — selected hero portrait, direction-aware via 3D rotateY (same technique as CrystalEnemy).
-                  rotateY(35deg) = face right (toward enemy on right); rotateY(-35deg) = face left. Never faces screen. */}
+              {/* Hero sprite — direction-aware via 3D rotateY (rule f013c31).
+                  rotateY(35deg) = face right (toward enemy on right); rotateY(-35deg) = face left. Never faces screen.
+                  Attack pose: forward lunge translateX + rotateZ tilt for duel illusion when no side sprite exists. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={getHeroImage(arenaData.heroGender ?? "M", arenaData.heroColorTheme ?? "default", 0)}
                 alt={arenaData.heroName}
                 style={{
                   height: 190, width: "auto", display: "block",
-                  transform: (isAttacking || phase === "challenge" || phase === "shooting" || phase === "feedback")
+                  transform: isAttacking
                     ? heroFacingLeft
-                      ? "perspective(600px) scale(1.28) translateY(-12px) rotateY(-40deg)"
-                      : "perspective(600px) scale(1.28) translateY(-12px) rotateY(40deg)"
+                      // Attack lunge LEFT: lean forward, tilt body, punch arm out
+                      ? "perspective(600px) scale(1.35) translateY(-18px) translateX(-22px) rotateY(-45deg) rotateZ(6deg)"
+                      // Attack lunge RIGHT: lean forward, tilt body, punch arm out
+                      : "perspective(600px) scale(1.35) translateY(-18px) translateX(22px) rotateY(45deg) rotateZ(-6deg)"
+                    : (phase === "challenge" || phase === "shooting" || phase === "feedback")
+                    ? heroFacingLeft
+                      // Battle-ready duel stance LEFT
+                      ? "perspective(600px) scale(1.28) translateY(-10px) rotateY(-40deg) rotateZ(2deg)"
+                      // Battle-ready duel stance RIGHT
+                      : "perspective(600px) scale(1.28) translateY(-10px) rotateY(40deg) rotateZ(-2deg)"
                     : (isStagingActive || (isHeroMoving && phase === "battle"))
                     ? heroFacingLeft
                       ? "perspective(600px) scale(1.35) rotateY(-35deg)"
@@ -2856,14 +2870,14 @@ function ArenaPageContent() {
                   transformOrigin: (isStagingActive || (isHeroMoving && phase === "battle"))
                     ? "bottom center"
                     : "center center",
-                  filter: (phase === "challenge" || phase === "shooting" || phase === "feedback")
-                    ? isAttacking
-                      ? "drop-shadow(0 0 28px rgba(34,211,238,1)) drop-shadow(0 0 14px white) brightness(1.5)"
-                      : phase === "feedback" && feedback?.isCorrect
-                        ? "drop-shadow(0 0 22px rgba(34,211,238,0.95)) drop-shadow(0 0 10px white) brightness(1.35)"
-                        : "drop-shadow(0 0 18px rgba(34,211,238,0.85)) drop-shadow(0 0 8px rgba(167,139,250,0.7)) brightness(1.2)"
+                  filter: isAttacking
+                    ? "drop-shadow(0 0 32px rgba(34,211,238,1)) drop-shadow(0 0 16px white) brightness(1.6)"
+                    : (phase === "challenge" || phase === "shooting" || phase === "feedback")
+                    ? phase === "feedback" && feedback?.isCorrect
+                      ? "drop-shadow(0 0 22px rgba(34,211,238,0.95)) drop-shadow(0 0 10px white) brightness(1.35)"
+                      : "drop-shadow(0 0 18px rgba(34,211,238,0.85)) drop-shadow(0 0 8px rgba(167,139,250,0.7)) brightness(1.2)"
                     : "drop-shadow(0 0 12px rgba(139,92,246,0.7))",
-                  transition: isAttacking ? "transform 0.1s ease-out, filter 0.1s ease-out" : "transform 0.15s ease-out, filter 0.3s ease",
+                  transition: isAttacking ? "transform 0.08s ease-out, filter 0.08s ease-out" : "transform 0.15s ease-out, filter 0.3s ease",
                   imageRendering: "auto",
                 }}
               />
