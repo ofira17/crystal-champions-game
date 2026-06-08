@@ -423,35 +423,45 @@ Local Gilad PNGs were always RGBA (correct). Production CDN served stale RGB (wh
 
 **Rule:** If production serves stale assets after a PNG replacement, do NOT reuse the old filename — create versioned copies (e.g., `_v2_`) and update all references. CDN cache is busted automatically because new URLs have no cache entry.
 
-## Enemy Rotation Rule (FIXED 2026-06-08)
+## Enemy Rotation Rule (UPDATED 2026-06-08)
 
-### The 5 Crystal Enemies (in order)
-| # | Name   | English        | Hebrew  |
-|---|--------|----------------|---------|
-| 0 | Prisma | Crystal Butterfly | פריזמה |
-| 1 | Orion  | Crystal Owl    | אוריון  |
-| 2 | Luma   | Crystal Bird   | לומה   |
-| 3 | Gembo  | Crystal Turtle | גמבו   |
-| 4 | Bubli  | Crystal Slime  | בובלי  |
+### The 9-Enemy Mixed Roster (classic + crystal, interleaved)
+| # | Key    | English           | Hebrew          | Sprite style |
+|---|--------|-------------------|-----------------|--------------|
+| 0 | goblin | Question Goblin   | גובלין השאלות  | Classic (single + rotateY flip) |
+| 1 | prisma | Crystal Butterfly | פריזמה          | Crystal (3-directional) |
+| 2 | bat    | Mistake Bat       | עטלף הטעויות   | Classic |
+| 3 | orion  | Crystal Owl       | אוריון           | Crystal |
+| 4 | giant  | Memory Giant      | ענק הזיכרון    | Classic |
+| 5 | luma   | Crystal Bird      | לומה             | Crystal |
+| 6 | wizard | Confusion Wizard  | קוסם הבלבול    | Classic |
+| 7 | gembo  | Crystal Turtle    | גמבו             | Crystal |
+| 8 | bubli  | Crystal Slime     | בובלי            | Crystal |
 
 ### Rotation Logic
 - `enemyIndex` state (starts at 0) drives which enemy appears.
-- `enemyVariant = getEnemyVariantByIndex(enemyIndex)` → cycles Prisma → Orion → Luma → Gembo → Bubli → loop.
+- `enemyVariant = getEnemyVariantByIndex(enemyIndex)` → cycles through all 9 enemies in order, looping.
 - `enemyIndex` increments by 1 **only** when `res.isCorrect === true` (inside `handleAnswer`).
 - **Wrong answers keep the same enemy** — `enemyIndex` does NOT change.
 - The enemy's appear animation replays on each change via `key={shown-${enemyIndex}}`.
 
-### Asset Convention
-Each enemy has 3 directional sprites named by variant (e.g. `prisma-1.png`):
+### Sprite Conventions
+**Classic enemies** (goblin/bat/giant/wizard — `isLegacy: true` in VARIANT_META):
+- Use `{slug}-1.png` (front-facing) for normal state; `{slug}-5.png` when attacking
+- Direction via CSS `scaleX(-1)` when `shouldFaceLeft`; subtle `rotateY(±18deg)` for depth
+- `slug` field maps variant key to actual asset filename (e.g. goblin → "question-goblin")
+
+**Crystal enemies** (prisma/orion/luma/gembo/bubli):
 - `{variant}-1.png` — front-facing / special state
-- `{variant}-2.png` — side-approach sprite (enemy entering from right side)
+- `{variant}-2.png` — side-approach sprite (enemy entering from right)
 - `{variant}-3.png` — battle stance (left-facing toward hero)
-- No `-5.png` frames exist or are used.
 
-All sprites MUST be RGBA PNGs with a real transparent background (alpha channel). Never use RGB PNGs or sprites with baked checkerboard/solid backgrounds — they will not blend into the crystal arena.
+All sprites MUST be RGBA PNGs with a real transparent background.
 
-### Side-Angle Rule
-Enemies always enter from `x=90%` and face left toward the hero. CSS `perspective(300px) rotateY(-40deg)` is applied when `enemyX > heroX`. `enemyAngle` is auto-derived from position: `x > 55%` → "right" (approach sprite), else "left" (idle sprite). Never use front-facing sprites as the primary battle view.
+### AI Archetypes (arena/page.tsx)
+- Ground (hop/bounce): goblin, prisma, giant, gembo
+- Aerial (swoop/orbit): bat, orion, luma
+- Teleport/dodge: wizard, bubli
 
 ### Do NOT change
 - Question count (20), grade rules, rewards, Supabase, auth, or Vercel config.

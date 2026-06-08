@@ -1339,22 +1339,24 @@ function ArenaPageContent() {
       // Per-archetype velocity (in arena %/sec).
       // KEEP_DIST = personal space — enemies orbit/approach but never land on the hero's body.
       const KEEP_DIST =
-        v === "luma"  ? 18 :
-        v === "orion" ? 16 :
-        v === "bubli" ? 20 : 15;
+        v === "luma"   ? 18 :
+        v === "orion"  ? 16 :
+        v === "bubli"  ? 20 :
+        v === "wizard" ? 20 :
+        v === "giant"  ? 14 : 15;
       let dvx = 0, dvy = 0;
-      if (v === "prisma" || v === "gembo") {
-        // Prisma (butterfly) and Gembo (turtle): ground-level approach with hop/bounce.
+      if (v === "prisma" || v === "gembo" || v === "goblin" || v === "giant") {
+        // Ground enemies: hop/bounce approach.
         const GROUND_Y = Math.max(62, Math.min(82, hy + 6));
-        const SPEED = v === "gembo" ? 10 : 20;
+        const SPEED = (v === "gembo" || v === "giant") ? 10 : 20;
         const dirX = Math.sign(dx) || 1;
         const approach = dist > KEEP_DIST ? 1 : -0.35;
         dvx = dirX * SPEED * approach;
         const hop = Math.sin(age * 7) * 6;
         dvy = (GROUND_Y - s.y) * 4 - Math.max(0, Math.sin(age * 7)) * hop;
         s.animPhase = Math.hypot(s.vx, s.vy) > 2 ? 1 : 0;
-      } else if (v === "orion" || v === "luma") {
-        // Orion (owl) and Luma (bird): curved aerial swoop that orbits the hero.
+      } else if (v === "orion" || v === "luma" || v === "bat") {
+        // Aerial enemies: curved swoop that orbits the hero.
         const SPEED = v === "luma" ? 18 : 24;
         const tangX = -uy, tangY = ux;
         const approach = dist > KEEP_DIST ? 1 : -0.4;
@@ -1363,7 +1365,7 @@ function ArenaPageContent() {
         dvx = ux * SPEED * approach + tangX * SPEED * 0.9 * swoop + curl * 3;
         dvy = uy * SPEED * approach + tangY * SPEED * 0.9 * swoop - Math.cos(age * 3.2) * 5;
         s.animPhase = Math.hypot(s.vx, s.vy) > 2 ? 1 : 0;
-      } else { // bubli (slime): teleport / dash / dodge
+      } else { // bubli + wizard (slime/wizard): teleport / dash / dodge
         s.teleportCooldown -= dt;
         const projectileInFlight = showProjectileRef.current;
         const safeRadius = () => KEEP_DIST + 4 + Math.random() * 8;
@@ -1416,9 +1418,11 @@ function ArenaPageContent() {
       // Hard personal-space clamp — never let the enemy stand on the hero's body.
       // Uses the same KEEP_DIST so each archetype keeps its own comfortable distance.
       const KEEP_DIST_CLAMP =
-        v === "luma"  ? 17 :
-        v === "orion" ? 15 :
-        v === "bubli" ? 18 : 14;
+        v === "luma"   ? 17 :
+        v === "orion"  ? 15 :
+        v === "bubli"  ? 18 :
+        v === "wizard" ? 18 :
+        v === "giant"  ? 13 : 14;
       if (age > 0.6) {
         const ddx = s.x - hx;
         const ddy = s.y - hy;
@@ -2249,6 +2253,13 @@ function ArenaPageContent() {
           80%     { transform: translateX(3px);   }
         }
 
+        /* ── Shoot beam flash — played on the outer halo line during shooting phase ── */
+        @keyframes shoot-beam-flash {
+          0%   { opacity: 1; }
+          60%  { opacity: 0.75; }
+          100% { opacity: 0; }
+        }
+
         /* ── Arena shake ── */
         .arena-strong-shake { animation: arena-strong-shake 230ms ease-out; }
         @keyframes arena-strong-shake {
@@ -2793,7 +2804,7 @@ function ArenaPageContent() {
         )}
 
         {/* ── Targeting beam: hero hand → just before enemy body ── */}
-        {(phase === "battle" || phase === "challenge") && arenaData && (() => {
+        {(phase === "battle" || phase === "challenge" || (phase === "shooting" && showProjectile)) && arenaData && (() => {
           const aw = arenaRef.current?.offsetWidth  ?? 700;
           const ah = arenaRef.current?.offsetHeight ?? 400;
           // Hero attack hand: offset right (+40) when facing right, left (-40) when facing left
@@ -2822,17 +2833,17 @@ function ArenaPageContent() {
                   <stop offset="100%" stopColor="#f0f9ff" stopOpacity="0.85" />
                 </linearGradient>
               </defs>
-              {/* Outer soft glow halo — thinner, more transparent */}
-              <line x1={hx} y1={hy} x2={bx} y2={by} stroke="rgba(34,211,238,0.12)" strokeWidth="16" strokeLinecap="round" />
+              {/* Outer soft glow halo */}
+              <line x1={hx} y1={hy} x2={bx} y2={by} stroke={phase === "shooting" ? "rgba(34,211,238,0.55)" : "rgba(34,211,238,0.12)"} strokeWidth={phase === "shooting" ? 28 : 16} strokeLinecap="round" style={phase === "shooting" ? { animation: "shoot-beam-flash 380ms ease-out forwards" } : undefined} />
               {/* Mid glow */}
-              <line x1={hx} y1={hy} x2={bx} y2={by} stroke="rgba(103,232,249,0.30)" strokeWidth="6" strokeLinecap="round" />
+              <line x1={hx} y1={hy} x2={bx} y2={by} stroke={phase === "shooting" ? "rgba(103,232,249,0.80)" : "rgba(103,232,249,0.30)"} strokeWidth={phase === "shooting" ? 10 : 6} strokeLinecap="round" />
               {/* Main beam */}
-              <line x1={hx} y1={hy} x2={bx} y2={by} stroke={`url(#${gradId})`} strokeWidth="2.5" strokeLinecap="round" />
+              <line x1={hx} y1={hy} x2={bx} y2={by} stroke={`url(#${gradId})`} strokeWidth={phase === "shooting" ? 5 : 2.5} strokeLinecap="round" />
               {/* Bright core */}
-              <line x1={hx} y1={hy} x2={bx} y2={by} stroke="rgba(240,249,255,0.70)" strokeWidth="1" strokeLinecap="round" />
-              {/* Small spark dot at beam tip (enemy-edge impact point) */}
-              <circle cx={bx} cy={by} r={5} fill="rgba(34,211,238,0.55)" />
-              <circle cx={bx} cy={by} r={2.5} fill="rgba(255,255,255,0.85)" />
+              <line x1={hx} y1={hy} x2={bx} y2={by} stroke={phase === "shooting" ? "rgba(255,255,255,1)" : "rgba(240,249,255,0.70)"} strokeWidth={phase === "shooting" ? 2.5 : 1} strokeLinecap="round" />
+              {/* Spark dot at beam tip */}
+              <circle cx={bx} cy={by} r={phase === "shooting" ? 9 : 5} fill={phase === "shooting" ? "rgba(34,211,238,0.9)" : "rgba(34,211,238,0.55)"} />
+              <circle cx={bx} cy={by} r={phase === "shooting" ? 4.5 : 2.5} fill="rgba(255,255,255,0.95)" />
             </svg>
           );
         })()}

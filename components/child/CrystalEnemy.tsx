@@ -2,31 +2,45 @@
 
 import React from "react";
 
-export type EnemyVariant = "prisma" | "orion" | "luma" | "gembo" | "bubli";
+export type EnemyVariant =
+  | "prisma" | "orion" | "luma" | "gembo" | "bubli"
+  | "goblin" | "bat" | "giant" | "wizard";
 
-export const ENEMY_VARIANTS: EnemyVariant[] = ["prisma", "orion", "luma", "gembo", "bubli"];
+// Mixed roster: old 4 enemies interleaved with new 5 crystal enemies.
+// Advances on correct answers only; wrong answers keep same enemy.
+export const ENEMY_VARIANTS: EnemyVariant[] = [
+  "goblin", "prisma", "bat", "orion", "giant", "luma", "wizard", "gembo", "bubli",
+];
 export const ENEMY_COUNT = ENEMY_VARIANTS.length;
 
-/** Returns the enemy variant for a given 0-based index, cycling through all 5. */
+/** Returns the enemy variant for a given 0-based index, cycling through all 9. */
 export function getEnemyVariantByIndex(index: number): EnemyVariant {
   return ENEMY_VARIANTS[((index % ENEMY_COUNT) + ENEMY_COUNT) % ENEMY_COUNT];
 }
 
-/** @deprecated Use getEnemyVariantByIndex. Kept for any callers that pass worldId. */
+/** @deprecated Use getEnemyVariantByIndex. Kept for legacy callers. */
 export function getEnemyVariant(_worldId: string | null): EnemyVariant {
   return "prisma";
 }
 
 // spawnY: default y% position when entering from the right side of the arena.
+// isLegacy: old enemies use a single front-facing sprite with perspective flip,
+//           not the 3-directional crystal sprite system.
 const VARIANT_META: Record<
   EnemyVariant,
-  { nameHe: string; nameEn: string; glow: string; size: number; spawnY: number }
+  { nameHe: string; nameEn: string; glow: string; size: number; spawnY: number; slug?: string; isLegacy?: boolean }
 > = {
+  // ── New crystal enemies ──────────────────────────────────────────────────
   prisma: { nameHe: "פריזמה", nameEn: "Crystal Butterfly", glow: "rgba(103,232,249,0.85)", size: 300, spawnY: 67 },
   orion:  { nameHe: "אוריון",  nameEn: "Crystal Owl",       glow: "rgba(251,191,36,0.85)",  size: 340, spawnY: 18 },
   luma:   { nameHe: "לומה",   nameEn: "Crystal Bird",      glow: "rgba(147,197,253,0.85)", size: 360, spawnY: 28 },
   gembo:  { nameHe: "גמבו",   nameEn: "Crystal Turtle",    glow: "rgba(74,222,128,0.85)",  size: 380, spawnY: 60 },
   bubli:  { nameHe: "בובלי",  nameEn: "Crystal Slime",     glow: "rgba(232,121,249,0.85)", size: 320, spawnY: 72 },
+  // ── Classic enemies ──────────────────────────────────────────────────────
+  goblin: { nameHe: "גובלין השאלות", nameEn: "Question Goblin", glow: "rgba(74,222,128,0.80)",  size: 320, spawnY: 60, slug: "question-goblin",  isLegacy: true },
+  bat:    { nameHe: "עטלף הטעויות",  nameEn: "Mistake Bat",     glow: "rgba(167,139,250,0.80)", size: 300, spawnY: 30, slug: "mistake-bat",      isLegacy: true },
+  giant:  { nameHe: "ענק הזיכרון",   nameEn: "Memory Giant",    glow: "rgba(220,220,255,0.85)", size: 380, spawnY: 55, slug: "memory-giant",     isLegacy: true },
+  wizard: { nameHe: "קוסם הבלבול",   nameEn: "Confusion Wizard", glow: "rgba(168,85,247,0.85)", size: 340, spawnY: 50, slug: "confusion-wizard", isLegacy: true },
 };
 
 export function getEnemyName(_worldId: string | null): string {
@@ -39,7 +53,8 @@ export function getEnemyNameByVariant(variant: EnemyVariant): string {
 
 export function getEnemyMeta(variant: EnemyVariant) {
   const m = VARIANT_META[variant];
-  return { ...m, src: `/enemies/${variant}-1.png` };
+  const slug = m.slug ?? variant;
+  return { ...m, src: `/enemies/${slug}-1.png` };
 }
 
 /** Returns the default spawn Y% for this variant. */
@@ -54,22 +69,13 @@ export interface CrystalEnemyProps {
   damaged?:    boolean;
   hp?:         number;
   showName?:   boolean;
-  /** Arena-% X position of the enemy. Used to select directional sprite and facing. */
   enemyX?:     number;
-  /** Arena-% X position of the hero. When enemyX > heroX the enemy faces LEFT (toward hero). */
   heroX?:      number;
-  /** @deprecated — pass enemyX + heroX instead */
+  /** @deprecated */
   facingDeg?:  number;
   animPhase?:  number;
   attacking?:  boolean;
   locked?:     boolean;
-  /**
-   * Which of the 3 directional sprites to show:
-   *  "right"  — enemy is moving left (entering from right side of arena)
-   *  "left"   — enemy is at battle position, facing the hero on the left
-   *  "front"  — face-on (reserved for special states)
-   * Derived automatically from enemyX when not provided.
-   */
   enemyAngle?: "front" | "right" | "left";
 }
 
@@ -90,43 +96,40 @@ export function CrystalEnemy({
   const v    = variant ?? "prisma";
   const meta = VARIANT_META[v];
   const px   = size ?? meta.size;
+  const slug = meta.slug ?? v;
 
-  // Derive angle from position if not explicitly passed.
-  // Enemy always enters from x≈90% and approaches hero at x≈35%.
-  // While x > 55, it's still in "entry approach" → show side-view sprite.
-  const derivedAngle: "front" | "right" | "left" =
-    enemyAngle ??
-    (enemyX !== undefined
-      ? enemyX > 55 ? "right" : "left"
-      : (((facingDeg % 360) + 360) % 360 <= 180 ? "right" : "left"));
-
-  // Sprite selection:
-  //   right (entry approach) → -2.png
-  //   left  (battle stance)  → -3.png
-  //   front / attacking      → -1.png
-  const src =
-    derivedAngle === "right"
-      ? `/enemies/${v}-2.png`
-      : derivedAngle === "left"
-      ? `/enemies/${v}-3.png`
-      : `/enemies/${v}-1.png`;
-
-  // Facing logic:
-  //   Enemy spawns at x≈90 (right), hero at x≈35 (left).
-  //   shouldFaceLeft = true when enemy is to the right of hero.
-  //   For entry sprite (-2.png): mirror with scaleX(-1) so the sprite faces left toward hero.
-  //   For battle sprite (-1.png): use a subtle rotateY perspective tilt only.
-  //   Positive rotateY tips the left edge toward viewer (left-facing perspective).
   const shouldFaceLeft: boolean =
     enemyX !== undefined && heroX !== undefined
       ? enemyX > heroX
-      : derivedAngle !== "right";
+      : (((facingDeg % 360) + 360) % 360 > 180);
 
-  // For the side-approach sprite (-2.png), scaleX(-1) flips the sprite to face left.
-  // For the combat sprite (-1.png), rely on rotateY perspective only.
-  const useScaleFlip = derivedAngle === "right" && shouldFaceLeft;
-  // Small rotateY gives a duel-angle illusion without showing the back.
-  const rotateY = shouldFaceLeft ? -20 : 20;
+  let src: string;
+  let useScaleFlip: boolean;
+  let rotateY: number;
+
+  if (meta.isLegacy) {
+    // Old enemies: single front-facing sprite, flipped via scaleX(-1) for direction.
+    src = attacking ? `/enemies/${slug}-5.png` : `/enemies/${slug}-1.png`;
+    useScaleFlip = shouldFaceLeft;
+    rotateY = shouldFaceLeft ? -18 : 18;
+  } else {
+    // New crystal enemies: 3-directional sprites.
+    const derivedAngle: "front" | "right" | "left" =
+      enemyAngle ??
+      (enemyX !== undefined
+        ? enemyX > 55 ? "right" : "left"
+        : (((facingDeg % 360) + 360) % 360 <= 180 ? "right" : "left"));
+
+    src =
+      derivedAngle === "right"
+        ? `/enemies/${v}-2.png`
+        : derivedAngle === "left"
+        ? `/enemies/${v}-3.png`
+        : `/enemies/${v}-1.png`;
+
+    useScaleFlip = derivedAngle === "right" && shouldFaceLeft;
+    rotateY = shouldFaceLeft ? -20 : 20;
+  }
 
   const lowHp = hp <= 30;
   const dropShadow = damaged
@@ -135,13 +138,11 @@ export function CrystalEnemy({
     ? `drop-shadow(0 0 14px rgba(255,80,80,0.7)) drop-shadow(0 0 20px ${meta.glow})`
     : `drop-shadow(0 0 18px ${meta.glow}) drop-shadow(0 2px 6px rgba(0,0,0,0.55))`;
 
-  // Crystal aura: white outline glow hugging the sprite silhouette
   const crystalGlow =
     "drop-shadow(0 0 8px rgba(255,255,255,0.95)) drop-shadow(0 0 18px rgba(220,220,255,0.75)) drop-shadow(0 0 30px rgba(200,200,255,0.50))";
 
   const bob = Math.sin(animPhase * Math.PI * 2) * 4;
 
-  // Size shrinks with HP: 100% HP → full size; 0% HP → 50% floor.
   const clampedHp = Math.max(0, Math.min(100, hp));
   const minPx     = Math.round(px * 0.5);
   const visualPx  = Math.round(minPx + (px - minPx) * (clampedHp / 100));
