@@ -48,6 +48,22 @@ C:\Users\97253\Desktop\קלוד\crystal-champions\.claude\settings.local.json
 
 **Never set:** `bypassPermissions` or `dangerously-skip-permissions`.
 
+## Game Intro Overlay (CANONICAL — DO NOT revert)
+
+A full-screen intro overlay is shown **once per login/session** when the child first enters the arena (`phase === "battle"`). It uses `sessionStorage` key `crystal_intro_shown` to track whether the intro was already shown — never shows again within the same browser session.
+
+**Intro text (exact Hebrew):**
+"ברוך הבא ל־Champions Crystal. ממלכת הקריסטלים בסכנה. רק ידע נכון יכול להטעין את היהלומים שלך ולעצור את האויבים. ענה נכון, ירה חזק, והפוך לאלוף הקריסטלים!"
+
+**Behavior:**
+- Appears only once per login session (sessionStorage, not DB)
+- Auto-dismisses after **10 seconds**
+- Dismisses immediately on any click/tap anywhere on the screen
+- After dismissing, game continues automatically (no required button click)
+- Must NOT appear when child re-enters the arena during the same session
+
+**Implementation:** `showIntro` state + `dismissIntro` callback in `ArenaPageContent`. Overlay is a fixed `div` at `zIndex: 200`. Does NOT touch arena logic, enemies, questions, rewards, Supabase, or auth.
+
 ## Battle Completion Rules (CANONICAL — DO NOT revert)
 
 - Default battle = 20 questions. All questions MUST be answered before any reward or victory.

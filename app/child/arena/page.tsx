@@ -828,6 +828,29 @@ function ArenaPageContent() {
   const [beamSnapshot, setBeamSnapshot]   = useState<{ hx: number; hy: number; ex: number; ey: number } | null>(null);
   const [isPending,     startTransition]  = useTransition();
 
+  // ── Game intro overlay (once per login session) ───────────────────────────
+  const [showIntro, setShowIntro] = useState(false);
+
+  // Mark intro shown and hide it
+  const dismissIntro = useCallback(() => {
+    sessionStorage.setItem("crystal_intro_shown", "1");
+    setShowIntro(false);
+  }, []);
+
+  // Show intro when battle starts for the first time this session
+  useEffect(() => {
+    if (phase === "battle" && !sessionStorage.getItem("crystal_intro_shown")) {
+      setShowIntro(true);
+    }
+  }, [phase]);
+
+  // Auto-dismiss after 10 seconds
+  useEffect(() => {
+    if (!showIntro) return;
+    const t = setTimeout(dismissIntro, 10000);
+    return () => clearTimeout(t);
+  }, [showIntro, dismissIntro]);
+
   // ── Portrait guard (mobile only) ──────────────────────────────────────────
   const [isMobilePortrait, setIsMobilePortrait] = useState(false);
   useEffect(() => {
@@ -1295,8 +1318,9 @@ function ArenaPageContent() {
           stagingRef.current = false;
           setIsStagingActive(false);
           setEnemyVisible(true); // enemy pops in dramatically after hero walks into position
-          // Grace: block contact for 700ms so child sees the face-off before question opens
-          lastContactRef.current = performance.now() + 300;
+          // Block RAF proximity trigger; guaranteed open fires after face-off grace period.
+          lastContactRef.current = performance.now() + 1200;
+          setTimeout(() => handleFireCrystalRef.current?.(), 700);
         }, 1050);
         return () => clearTimeout(stagingTimer);
       } else {
@@ -1308,8 +1332,9 @@ function ArenaPageContent() {
         const timer = setTimeout(() => {
           stagingRef.current = false;
           setEnemyVisible(true); // enemy pops in with appear animation
-          // Grace: block contact for 700ms so child sees the face-off before question opens
-          lastContactRef.current = performance.now() + 300;
+          // Block RAF proximity trigger; guaranteed open fires after face-off grace period.
+          lastContactRef.current = performance.now() + 1200;
+          setTimeout(() => handleFireCrystalRef.current?.(), 700);
         }, 350);
         return () => clearTimeout(timer);
       }
@@ -3080,6 +3105,113 @@ function ArenaPageContent() {
       {/* ── Feedback bar — BELOW arena, compact, never covers battle ── */}
       {phase === "feedback" && feedback && (
         <FeedbackOverlay result={feedback} energyBefore={feedbackEnergyBefore} />
+      )}
+
+      {/* ── Game intro overlay — once per session ── */}
+      {showIntro && (
+        <div
+          onClick={dismissIntro}
+          style={{
+            position: "fixed", inset: 0, zIndex: 200,
+            background: "radial-gradient(ellipse at 50% 40%, rgba(30,5,70,0.97) 0%, rgba(8,4,28,0.99) 100%)",
+            display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            padding: "28px 24px",
+            cursor: "pointer",
+            userSelect: "none",
+          }}
+          dir="rtl"
+        >
+          <style>{`
+            @keyframes intro-glow-pulse {
+              0%,100% { text-shadow: 0 0 18px #c084fc, 0 0 36px rgba(192,132,252,0.5), 0 0 6px white; }
+              50%     { text-shadow: 0 0 32px #a78bfa, 0 0 64px rgba(167,139,250,0.7), 0 0 14px white; }
+            }
+            @keyframes intro-title-in {
+              0%   { opacity: 0; transform: scale(0.6) translateY(-30px); }
+              65%  { opacity: 1; transform: scale(1.08) translateY(4px); }
+              100% { opacity: 1; transform: scale(1) translateY(0); }
+            }
+            @keyframes intro-text-in {
+              0%   { opacity: 0; transform: translateY(24px); }
+              100% { opacity: 1; transform: translateY(0); }
+            }
+            @keyframes intro-hint-pulse {
+              0%,100% { opacity: 0.45; }
+              50%     { opacity: 0.85; }
+            }
+            @keyframes intro-sparkle {
+              0%,100% { transform: scale(1) rotate(0deg); opacity: 0.7; }
+              50%     { transform: scale(1.35) rotate(20deg); opacity: 1; }
+            }
+          `}</style>
+
+          {/* Sparkles */}
+          {(["#22d3ee","#c084fc","#f472b6","#fbbf24","#a78bfa","#34d399"] as const).map((color, i) => (
+            <div key={i} style={{
+              position: "absolute",
+              top:  `${8 + (i * 14) % 80}%`,
+              left: `${4 + (i * 17) % 92}%`,
+              width: 10, height: 10,
+              background: color,
+              clipPath: "polygon(50% 0%,100% 50%,50% 100%,0% 50%)",
+              boxShadow: `0 0 10px ${color}`,
+              animation: `intro-sparkle ${1.8 + i * 0.3}s ease-in-out infinite`,
+              animationDelay: `${i * 0.25}s`,
+              pointerEvents: "none",
+            }} />
+          ))}
+
+          {/* Trophy */}
+          <div style={{ fontSize: 72, lineHeight: 1, filter: "drop-shadow(0 0 20px #fbbf24)", animation: "intro-title-in 0.7s cubic-bezier(0.34,1.56,0.64,1) both", marginBottom: 12 }}>
+            🏆
+          </div>
+
+          {/* Title */}
+          <h1 style={{
+            color: "#e9d5ff",
+            fontSize: 28,
+            fontWeight: 900,
+            textAlign: "center",
+            lineHeight: 1.3,
+            letterSpacing: "0.02em",
+            animation: "intro-title-in 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.05s both, intro-glow-pulse 2.2s ease-in-out infinite 0.7s",
+            marginBottom: 20,
+          }}>
+            Crystal Champions
+          </h1>
+
+          {/* Intro text */}
+          <p style={{
+            color: "#ddd6fe",
+            fontSize: 17,
+            fontWeight: 700,
+            textAlign: "center",
+            lineHeight: 1.75,
+            maxWidth: 380,
+            animation: "intro-text-in 0.55s ease-out 0.25s both",
+            marginBottom: 28,
+          }}>
+            ממלכת הקריסטלים בסכנה.
+            <br />רק ידע נכון יכול להטעין את היהלומים שלך ולעצור את האויבים.
+            <br />ענה נכון, ירה חזק,
+            <br />והפוך לאלוף הקריסטלים!
+          </p>
+
+          {/* Divider */}
+          <div style={{ width: 120, height: 2, borderRadius: 2, background: "linear-gradient(90deg, transparent, #c084fc, transparent)", marginBottom: 22 }} />
+
+          {/* Skip hint */}
+          <p style={{
+            color: "rgba(196,181,253,0.6)",
+            fontSize: 13,
+            fontWeight: 700,
+            textAlign: "center",
+            animation: "intro-hint-pulse 1.6s ease-in-out infinite",
+          }}>
+            לחץ בכל מקום להמשך ✦
+          </p>
+        </div>
       )}
 
       {/* ── D-pad — fixed overlay so it's never clipped by the arena's overflow:hidden ── */}
