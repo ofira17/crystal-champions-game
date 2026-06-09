@@ -2823,24 +2823,19 @@ function ArenaPageContent() {
           </div>
         )}
 
-        {/* ── Targeting beam: hero hand → just before enemy body ── */}
-        {(phase === "battle" || phase === "challenge" || (phase === "shooting" && showProjectile)) && arenaData && (() => {
+        {/* ── Targeting beam: locked snapshot only — no live battle tracking ── */}
+        {(phase === "challenge" || (phase === "shooting" && showProjectile)) && arenaData && (() => {
           const aw = arenaRef.current?.offsetWidth  ?? 700;
           const ah = arenaRef.current?.offsetHeight ?? 400;
-          // Use locked snapshot during challenge/shooting so beam doesn't oscillate with enemy drift.
-          // During battle, track live positions so beam follows the approaching enemy.
-          let hx: number, hy: number, ex: number, ey: number;
-          if (phase !== "battle" && beamSnapshot) {
-            hx = beamSnapshot.hx; hy = beamSnapshot.hy;
-            ex = beamSnapshot.ex; ey = beamSnapshot.ey;
-          } else {
-            const facingRight = enemyStateRef.current.x >= heroPos.x;
-            const handOffsetX = facingRight ? 40 : -40;
-            hx = (heroPos.x / 100) * aw + handOffsetX;
-            hy = (heroPos.y / 100) * ah + 55;
-            ex = (enemyStateRef.current.x / 100) * aw;
-            ey = (enemyStateRef.current.y / 100) * ah;
-          }
+          // Always use the locked snapshot (captured when challenge opened).
+          // Fallback to live positions only if snapshot hasn't been set yet.
+          const snap = beamSnapshot;
+          const facingRight = enemyStateRef.current.x >= heroPos.x;
+          const handOffsetX = facingRight ? 40 : -40;
+          const hx = snap ? snap.hx : (heroPos.x / 100) * aw + handOffsetX;
+          const hy = snap ? snap.hy : (heroPos.y / 100) * ah + 55;
+          const ex = snap ? snap.ex : (enemyStateRef.current.x / 100) * aw;
+          const ey = snap ? snap.ey : (enemyStateRef.current.y / 100) * ah;
           // Stop beam 38px short of enemy center so it doesn't pass through the body
           const beamLen = Math.hypot(ex - hx, ey - hy) || 1;
           const STOP = Math.min(38, beamLen * 0.25);
