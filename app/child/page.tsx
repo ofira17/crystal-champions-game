@@ -128,6 +128,9 @@ export default async function ChildPage() {
             className="card-brawl card-brawl-gold p-4 flex flex-col gap-3"
             style={{ background: "linear-gradient(160deg, rgba(120,53,15,0.85) 0%, rgba(69,26,3,0.95) 100%)" }}
           >
+            <div className="flex justify-center mb-1">
+              <span className="text-2xl">💜</span>
+            </div>
             <h3 className="text-amber-200 font-black text-center text-sm leading-tight">
               כל יום – עוד – ניצחון
             </h3>
@@ -299,16 +302,19 @@ export default async function ChildPage() {
                   <p className={`font-black text-sm leading-tight ${locked ? "text-slate-500" : "text-white"}`}>
                     {w.name_he}
                   </p>
+                  {w.description_he && !locked && (
+                    <p className="text-slate-300/70 text-xs leading-snug">{w.description_he}</p>
+                  )}
 
                   {!locked && !w.is_completed && (
                     <>
                       <div className="h-2 bg-black/40 rounded-full overflow-hidden border border-white/10">
                         <div
-                          className="h-2 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400"
+                          className="h-2 rounded-full bg-gradient-to-r from-emerald-500 to-green-400"
                           style={{ width: `${w.progress_percent}%` }}
                         />
                       </div>
-                      <p className="text-slate-400 text-xs">🔵 {w.progress_percent}%</p>
+                      <p className="text-slate-400 text-xs">🔵 {Math.round(w.progress_percent * 20 / 100)} / 20</p>
                     </>
                   )}
 
@@ -332,7 +338,7 @@ export default async function ChildPage() {
       <footer className="px-3 sm:px-5 pb-4 pt-1 flex items-center justify-between relative z-10">
         <div className="flex items-center gap-2">
           <span className="text-3xl">🐉</span>
-          <p className="text-violet-300/70 text-xs max-w-[130px] leading-tight hidden sm:block">
+          <p className="text-pink-400/90 text-xs max-w-[180px] leading-tight hidden sm:block">
             ♥ התרגול היומי עוד לך לזכור יותר ולנצח כל אתגר!
           </p>
         </div>
