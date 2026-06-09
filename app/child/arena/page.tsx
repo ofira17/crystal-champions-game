@@ -2878,9 +2878,11 @@ function ArenaPageContent() {
               <img
                 src={
                   isAttacking
-                    ? heroFacingLeft
-                      ? "/sprites/miti/attack-left.png"
-                      : "/sprites/miti/attack-right.png"
+                    ? (arenaData.heroColorTheme === "stone" || arenaData.heroColorTheme === "gilad")
+                      ? "/heroes/gilad/gilad_v2_08.png"
+                      : heroFacingLeft
+                        ? "/sprites/miti/attack-left.png"
+                        : "/sprites/miti/attack-right.png"
                     : getHeroImage(arenaData.heroGender ?? "M", arenaData.heroColorTheme ?? "default", 0)
                 }
                 alt={arenaData.heroName}
