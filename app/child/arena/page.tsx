@@ -2836,9 +2836,9 @@ function ArenaPageContent() {
           const hy = snap ? snap.hy : (heroPos.y / 100) * ah + 55;
           const ex = snap ? snap.ex : (enemyStateRef.current.x / 100) * aw;
           const ey = snap ? snap.ey : (enemyStateRef.current.y / 100) * ah;
-          // Stop beam 38px short of enemy center so it doesn't pass through the body
+          // Stop beam 75px short of enemy center — large enough to clear any enemy sprite body.
           const beamLen = Math.hypot(ex - hx, ey - hy) || 1;
-          const STOP = Math.min(38, beamLen * 0.25);
+          const STOP = 75;
           const ratio = Math.max(0, (beamLen - STOP) / beamLen);
           const bx = hx + (ex - hx) * ratio;
           const by = hy + (ey - hy) * ratio;
