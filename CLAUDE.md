@@ -60,7 +60,7 @@ C:\Users\97253\Desktop\קלוד\crystal-champions\.claude\settings.local.json
 ## Hero Attack Sprites — Per-Hero Rule (CANONICAL — DO NOT revert)
 
 - Attack sprites must match the **selected hero**, never default to Miti sprites for all heroes.
-- Gilad (colorTheme `"stone"` or `"gilad"`): use `/heroes/gilad/gilad_v2_08.png` as the attack frame.
+- Gilad (colorTheme `"stone"` or `"gilad"`): use `/heroes/gilad/gilad_v2_16.png` as the attack frame (arm extended, crystal blast firing).
 - Miti (all other themes): use `/sprites/miti/attack-left.png` / `/sprites/miti/attack-right.png`.
 - Guard in `app/child/arena/page.tsx` at the `isAttacking` ternary: check `arenaData.heroColorTheme` first.
 
