@@ -825,6 +825,7 @@ function ArenaPageContent() {
   const [strongShot,         setStrongShot]         = useState(false);
   const [enemyAnchor, setEnemyAnchor] = useState<{ top: number; left: number } | null>(null);
   const [arenaH,       setArenaH]         = useState(400);
+  const [beamSnapshot, setBeamSnapshot]   = useState<{ hx: number; hy: number; ex: number; ey: number } | null>(null);
   const [isPending,     startTransition]  = useTransition();
 
   // ── Portrait guard (mobile only) ──────────────────────────────────────────
@@ -1340,11 +1341,11 @@ function ArenaPageContent() {
       // Per-archetype velocity (in arena %/sec).
       // KEEP_DIST = personal space — enemies orbit/approach but never land on the hero's body.
       const KEEP_DIST =
-        v === "luma"   ? 18 :
-        v === "orion"  ? 16 :
-        v === "bubli"  ? 20 :
-        v === "wizard" ? 20 :
-        v === "giant"  ? 14 : 15;
+        v === "luma"   ? 28 :
+        v === "orion"  ? 26 :
+        v === "bubli"  ? 30 :
+        v === "wizard" ? 30 :
+        v === "giant"  ? 26 : 26;
       let dvx = 0, dvy = 0;
       if (v === "prisma" || v === "gembo" || v === "goblin" || v === "giant") {
         // Ground enemies: hop/bounce approach.
@@ -1419,11 +1420,11 @@ function ArenaPageContent() {
       // Hard personal-space clamp — never let the enemy stand on the hero's body.
       // Uses the same KEEP_DIST so each archetype keeps its own comfortable distance.
       const KEEP_DIST_CLAMP =
-        v === "luma"   ? 17 :
-        v === "orion"  ? 15 :
-        v === "bubli"  ? 18 :
-        v === "wizard" ? 18 :
-        v === "giant"  ? 13 : 14;
+        v === "luma"   ? 27 :
+        v === "orion"  ? 25 :
+        v === "bubli"  ? 28 :
+        v === "wizard" ? 28 :
+        v === "giant"  ? 25 : 25;
       if (age > 0.6) {
         const ddx = s.x - hx;
         const ddy = s.y - hy;
@@ -1655,6 +1656,18 @@ function ArenaPageContent() {
     // Open the question immediately on contact — no waiting.
     isAttackingRef.current = true;
     setIsAttacking(true);
+    // Lock beam direction at the moment of contact so it doesn't oscillate during challenge/shooting.
+    if (arenaRef.current) {
+      const _baw = arenaRef.current.offsetWidth;
+      const _bah = arenaRef.current.offsetHeight;
+      const _bFacingRight = enemyStateRef.current.x >= heroPosRef.current.x;
+      setBeamSnapshot({
+        hx: (heroPosRef.current.x / 100) * _baw + (_bFacingRight ? 40 : -40),
+        hy: (heroPosRef.current.y / 100) * _bah + 55,
+        ex: (enemyStateRef.current.x / 100) * _baw,
+        ey: (enemyStateRef.current.y / 100) * _bah,
+      });
+    }
     setPhase("challenge");
     attackTimerRef.current = setTimeout(() => {
       isAttackingRef.current = false;
@@ -1831,6 +1844,7 @@ function ArenaPageContent() {
       } else if (res.allAnswered) {
         setPhase("end");
       } else {
+        setBeamSnapshot(null);
         setEnemyVisible(false); // hide current enemy immediately so no flash before new one enters
         setCurrent(prev => prev + 1);
         setPhase("battle");
@@ -2813,14 +2827,20 @@ function ArenaPageContent() {
         {(phase === "battle" || phase === "challenge" || (phase === "shooting" && showProjectile)) && arenaData && (() => {
           const aw = arenaRef.current?.offsetWidth  ?? 700;
           const ah = arenaRef.current?.offsetHeight ?? 400;
-          // Hero attack hand: offset right (+40) when facing right, left (-40) when facing left
-          const facingRight = enemyStateRef.current.x >= heroPos.x;
-          const handOffsetX = facingRight ? 40 : -40;
-          const hx = (heroPos.x / 100) * aw + handOffsetX;
-          const hy = (heroPos.y / 100) * ah + 55; // chest/shoulder height
-          // Enemy center
-          const ex = (enemyStateRef.current.x / 100) * aw;
-          const ey = (enemyStateRef.current.y / 100) * ah;
+          // Use locked snapshot during challenge/shooting so beam doesn't oscillate with enemy drift.
+          // During battle, track live positions so beam follows the approaching enemy.
+          let hx: number, hy: number, ex: number, ey: number;
+          if (phase !== "battle" && beamSnapshot) {
+            hx = beamSnapshot.hx; hy = beamSnapshot.hy;
+            ex = beamSnapshot.ex; ey = beamSnapshot.ey;
+          } else {
+            const facingRight = enemyStateRef.current.x >= heroPos.x;
+            const handOffsetX = facingRight ? 40 : -40;
+            hx = (heroPos.x / 100) * aw + handOffsetX;
+            hy = (heroPos.y / 100) * ah + 55;
+            ex = (enemyStateRef.current.x / 100) * aw;
+            ey = (enemyStateRef.current.y / 100) * ah;
+          }
           // Stop beam 38px short of enemy center so it doesn't pass through the body
           const beamLen = Math.hypot(ex - hx, ey - hy) || 1;
           const STOP = Math.min(38, beamLen * 0.25);
@@ -2891,6 +2911,12 @@ function ArenaPageContent() {
                       : heroFacingLeft
                         ? "/sprites/miti/attack-left.png"
                         : "/sprites/miti/attack-right.png"
+                    : (phase === "challenge" || phase === "shooting" || phase === "feedback")
+                    ? (arenaData.heroColorTheme === "stone" || arenaData.heroColorTheme === "gilad")
+                      ? heroFacingLeft
+                        ? "/heroes/gilad/gilad_v2_15.png"
+                        : "/heroes/gilad/gilad_v2_10.png"
+                      : "/sprites/miti/attack-front.png"
                     : getHeroImage(arenaData.heroGender ?? "M", arenaData.heroColorTheme ?? "default", 0)
                 }
                 alt={arenaData.heroName}
