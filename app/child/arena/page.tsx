@@ -829,6 +829,8 @@ function ArenaPageContent() {
   const [arenaH,       setArenaH]         = useState(400);
   const [beamSnapshot, setBeamSnapshot]   = useState<{ hx: number; hy: number; ex: number; ey: number } | null>(null);
   const [isPending,     startTransition]  = useTransition();
+  // Freeze enemy position immediately on hit — cleared when next enemy spawns
+  const enemyFrozenRef = useRef(false);
 
   // ── Game intro overlay (once per login session) ───────────────────────────
   const [showIntro, setShowIntro] = useState(false);
@@ -1289,6 +1291,7 @@ function ArenaPageContent() {
     if (phase === "battle") {
       lastContactRef.current = 0;
       setEnemyDissolving(false);
+      enemyFrozenRef.current = false; // unfreeze for new enemy
 
       // Enemy ALWAYS enters from the RIGHT side — fixed position per variant.
       const v = enemyVariantRef.current;
@@ -1433,7 +1436,12 @@ function ArenaPageContent() {
       // Pause/freeze the enemy ONLY while the question is on screen. After the
       // child answers (shooting/feedback), the enemy resumes moving — important
       // so that a wrong answer feels like the enemy "continues" the attack.
-      if (phase !== "challenge") {
+      // Exception: freeze completely after a correct hit (enemyFrozenRef).
+      if (enemyFrozenRef.current) {
+        // Enemy was hit — lock in place, zero out velocity
+        s.vx = 0;
+        s.vy = 0;
+      } else if (phase !== "challenge") {
         s.vx = s.vx + (dvx * stagingBoost - s.vx) * Math.min(1, dt * 5);
         s.vy = s.vy + (dvy * stagingBoost - s.vy) * Math.min(1, dt * 5);
         s.x += s.vx * dt;
@@ -1800,6 +1808,11 @@ function ArenaPageContent() {
       }
 
       if (didHit) {
+        // Freeze enemy position immediately — it must not drift while dissolving/shrinking
+        enemyFrozenRef.current = true;
+        enemyStateRef.current.vx = 0;
+        enemyStateRef.current.vy = 0;
+
         // Confirm streak bookkeeping now that server validated the answer.
         setCorrectStreak(optimisticStreak);
         // strongShot was already set optimistically above — no change needed.

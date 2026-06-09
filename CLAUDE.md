@@ -248,6 +248,18 @@ Diamond/beam color is determined by `getDiamondType(questionText, difficulty, st
 **Visual CSS** is in `DIAMOND_STYLES` and `BEAM_COLORS` (same file). Applied in `app/child/arena/page.tsx` for the projectile `<div>` and SVG beam strokes only.
 **NEVER** use this for questions, correctness, rewards, enemies, hero sprites, or Supabase.
 
+## Enemy Freeze on Hit Rule (CANONICAL — 2026-06-09 — DO NOT revert)
+
+When a correct answer triggers a hit on the enemy, the enemy MUST freeze in place immediately and stay frozen until the next enemy spawns.
+
+**Implementation (`app/child/arena/page.tsx`):**
+- `enemyFrozenRef = useRef(false)` — ref (not state) so it is read every RAF frame without re-render cost.
+- Set `enemyFrozenRef.current = true` AND zero `enemyStateRef.current.vx/vy` at the START of the `didHit` branch in `handleAnswer()`, BEFORE any `await` — this freezes the enemy on the same tick the hit is confirmed.
+- Reset `enemyFrozenRef.current = false` at the TOP of the `phase === "battle"` entry block in the enemy-spawn `useEffect` — this unfreezes only when a new enemy starts spawning.
+- In the enemy AI RAF tick: check `if (enemyFrozenRef.current) { s.vx = 0; s.vy = 0; }` BEFORE the `phase !== "challenge"` / `phase === "challenge"` branch — frozen enemy skips ALL velocity/position updates, including the `stagingBoost` path.
+- Wrong answers MUST NOT set `enemyFrozenRef` — enemy continues drifting after a miss.
+- Only enemy AI position is frozen; dissolve/shrink CSS animations still play.
+
 ## Answer Visual Feedback Rule (CANONICAL — DO NOT revert)
 
 **Correct-answer visual feedback must start immediately and must not wait for server round-trip.**
