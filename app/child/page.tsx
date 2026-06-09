@@ -18,12 +18,40 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import LogoutButton from "@/components/auth/LogoutButton";
-import {
-  getHeroImage,
-  BOY_IMAGES,
-  GIRL_IMAGES,
-  GILAD_IMAGES,
-} from "@/components/child/HeroDisplay";
+
+// ── Hero image resolution (server-safe, no "use client" import) ───────────────
+const BOY_IMAGES = [
+  "/heroes/boy-0.png", "/heroes/boy-1.png", "/heroes/boy-2.png",
+  "/heroes/boy-3.png", "/heroes/boy-4.png", "/heroes/boy-5.png",
+  "/heroes/boy-6.png", "/heroes/boy-7.png", "/heroes/boy-8.png",
+  "/heroes/boy-9.png", "/heroes/boy-10.png",
+];
+const GIRL_IMAGES = [
+  "/heroes/girl-0.png", "/heroes/girl-1.png", "/heroes/girl-2.png",
+  "/heroes/girl-3.png", "/heroes/girl-4.png", "/heroes/girl-5.png",
+  "/heroes/girl-6.png", "/heroes/girl-7.png", "/heroes/girl-8.png",
+  "/heroes/girl-9.png",
+];
+const GILAD_IMAGES = Array.from({ length: 16 }, (_, i) =>
+  `/heroes/gilad/gilad_v2_${String(i + 1).padStart(2, "0")}.png`
+);
+const BOY_THEME_INDEX: Record<string, number> = {
+  default: 0, storm: 0, gold: 1, nature: 2, teal: 2,
+  fire: 3, dragon: 3, lava: 3, thunder: 4, yellow: 4,
+  ice: 5, crystal: 6, shadow: 6, pink: 6, stone: 6,
+  ocean: 8, star: 9, galaxy: 9, cosmic: 9,
+};
+const GIRL_THEME_INDEX: Record<string, number> = {
+  default: 0, storm: 0, ice: 1, crystal: 2, nature: 3, teal: 3,
+  fire: 4, dragon: 4, pink: 4, thunder: 5, yellow: 5,
+  gold: 6, sun: 6, star: 7, cosmic: 7, shadow: 9, ocean: 9,
+};
+function resolveHeroImage(gender: "M" | "F", colorTheme: string): string {
+  if (colorTheme === "stone" || colorTheme === "gilad") return GILAD_IMAGES[0];
+  const images = gender === "M" ? BOY_IMAGES : GIRL_IMAGES;
+  const map    = gender === "M" ? BOY_THEME_INDEX : GIRL_THEME_INDEX;
+  return images[map[colorTheme] ?? 0];
+}
 
 // ── World card visual theme per slot ─────────────────────────────────────────
 const WORLD_CARD_STYLES = [
@@ -101,7 +129,7 @@ export default async function ChildPage() {
     : 0;
 
   // Build hero image path (frameless transparent PNG)
-  const heroImgSrc = getHeroImage(heroGender, heroType, 0);
+  const heroImgSrc = resolveHeroImage(heroGender, heroType);
 
   return (
     <main
