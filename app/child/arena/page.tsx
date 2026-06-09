@@ -2879,7 +2879,9 @@ function ArenaPageContent() {
                 src={
                   isAttacking
                     ? (arenaData.heroColorTheme === "stone" || arenaData.heroColorTheme === "gilad")
-                      ? "/heroes/gilad/gilad_v2_16.png"
+                      ? heroFacingLeft
+                        ? "/heroes/gilad/gilad_v2_15.png"
+                        : "/heroes/gilad/gilad_v2_10.png"
                       : heroFacingLeft
                         ? "/sprites/miti/attack-left.png"
                         : "/sprites/miti/attack-right.png"
