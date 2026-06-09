@@ -1142,6 +1142,7 @@ function ArenaPageContent() {
   const [isHeroMoving,    setIsHeroMoving]    = useState(false);
   const [heroFacingLeft,  setHeroFacingLeft]  = useState(false);
   const [isAttacking,     setIsAttacking]     = useState(false);
+  const isAttackingRef  = useRef(false);
   const [runFrame,        setRunFrame]        = useState(0); // 0 = run-right.png, 1 = run-right2.png
   const attackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const heroPosRef        = useRef({ x: 11, y: 60 });
@@ -1595,7 +1596,8 @@ function ArenaPageContent() {
         isHeroMovingRef.current = moved;
         setIsHeroMoving(moved);
       }
-      if (goingLeft !== heroFacingLeftRef.current) {
+      // Don't flip facing direction mid-attack — it would swap the attack frame while shooting
+      if (!isAttackingRef.current && goingLeft !== heroFacingLeftRef.current) {
         heroFacingLeftRef.current = goingLeft;
         setHeroFacingLeft(goingLeft);
       }
@@ -1651,9 +1653,11 @@ function ArenaPageContent() {
     heroFacingLeftRef.current = _contactFacingLeft;
     setHeroFacingLeft(_contactFacingLeft);
     // Open the question immediately on contact — no waiting.
+    isAttackingRef.current = true;
     setIsAttacking(true);
     setPhase("challenge");
     attackTimerRef.current = setTimeout(() => {
+      isAttackingRef.current = false;
       setIsAttacking(false);
     }, 600);
   }
@@ -1692,6 +1696,7 @@ function ArenaPageContent() {
       heroFacingLeftRef.current = !facingRight;
       setHeroFacingLeft(!facingRight);
       setHeroAnim("attack");   // plays hero-attack-shoot 480ms lunge keyframes
+      isAttackingRef.current = true;
       setIsAttacking(true);    // dramatic shoot pose on img: scale+translateX+rotateZ+skew
       if (arenaRef.current) {
         const aw = arenaRef.current.offsetWidth;
@@ -1722,6 +1727,7 @@ function ArenaPageContent() {
 
       // Hero returns to normal once projectile lands
       setHeroAnim("idle");
+      isAttackingRef.current = false;
       setIsAttacking(false);
 
       if (!res.success) {
