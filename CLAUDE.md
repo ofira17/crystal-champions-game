@@ -235,6 +235,19 @@ Arena: `app/child/arena/page.tsx`
 - Same origin as beam (attack hand, not sprite center)
 - `projectileDriftPx` and `projectileTravelPx` follow exact beam vector to enemy center
 
+## Diamond Shot Visual Type Rule (CANONICAL — 2026-06-09)
+
+Diamond/beam color is determined by `getDiamondType(questionText, difficulty, streak)` in `lib/diamond-type.ts`.
+**Priority (highest first):**
+1. `difficulty` is `"hard"` or `"challenge"` (case-insensitive) → **rainbow**
+2. streak ≥ 3 → **gold**
+3. `difficulty === "easy"` → **blue** | `difficulty === "medium"` → **red**
+4. Infer from Grade 1 math text: numbers ≤ 10 → blue; numbers 11–20 or whole tens ≤ 100 → red
+5. Unknown/missing → **blue**
+
+**Visual CSS** is in `DIAMOND_STYLES` and `BEAM_COLORS` (same file). Applied in `app/child/arena/page.tsx` for the projectile `<div>` and SVG beam strokes only.
+**NEVER** use this for questions, correctness, rewards, enemies, hero sprites, or Supabase.
+
 ## Answer Visual Feedback Rule (CANONICAL — DO NOT revert)
 
 **Correct-answer visual feedback must start immediately and must not wait for server round-trip.**

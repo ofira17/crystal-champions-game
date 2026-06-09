@@ -15,6 +15,7 @@ import {
   type LootItem,
 } from "@/app/actions/arena";
 import { ENERGY_MAX }      from "@/lib/constants";
+import { getDiamondType, DIAMOND_STYLES, BEAM_COLORS, type DiamondType } from "@/lib/diamond-type";
 import { TreasureBox }     from "@/components/child/TreasureBox";
 import { CrystalEnemy, getEnemyVariantByIndex, getEnemyNameByVariant, getEnemyMeta, getEnemySpawnY, type EnemyVariant } from "@/components/child/CrystalEnemy";
 import { getHeroImage }    from "@/components/child/HeroDisplay";
@@ -823,6 +824,7 @@ function ArenaPageContent() {
   // 3-in-a-row streak — when current streak ≥ 3 the diamond shot turns gold/strong.
   const [correctStreak,      setCorrectStreak]      = useState(0);
   const [strongShot,         setStrongShot]         = useState(false);
+  const [diamondType,        setDiamondType]        = useState<DiamondType>("blue");
   const [enemyAnchor, setEnemyAnchor] = useState<{ top: number; left: number } | null>(null);
   const [arenaH,       setArenaH]         = useState(400);
   const [beamSnapshot, setBeamSnapshot]   = useState<{ hx: number; hy: number; ex: number; ey: number } | null>(null);
@@ -1727,6 +1729,7 @@ function ArenaPageContent() {
       // Corrected to 0 below if the server says wrong.
       const optimisticStreak = correctStreak + 1;
       setStrongShot(optimisticStreak >= 3);
+      setDiamondType(getDiamondType(q.text_he, q.difficulty, optimisticStreak));
 
       // 1. Aim line flashes briefly
       setShowAimLine(true);
@@ -2799,17 +2802,13 @@ function ArenaPageContent() {
               animation: `proj-up-hit 380ms cubic-bezier(0.1,0,0.4,1) forwards`,
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
-              {/* Diamond — gold + larger on a 3+ streak, electric cyan/blue-white otherwise. */}
+              {/* Diamond — color/size driven by getDiamondType (difficulty + streak). */}
               <div style={{
-                width:  strongShot ? 52 : 40,
-                height: strongShot ? 52 : 40,
-                background: strongShot
-                  ? "linear-gradient(160deg, #fff7c2 0%, #fde047 35%, #f59e0b 70%, #b45309 100%)"
-                  : "linear-gradient(160deg, #ffffff 0%, #bfefff 25%, #22d3ee 60%, #0891b2 100%)",
+                width:  DIAMOND_STYLES[diamondType].size,
+                height: DIAMOND_STYLES[diamondType].size,
+                background: DIAMOND_STYLES[diamondType].background,
                 clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)",
-                boxShadow: strongShot
-                  ? "0 0 28px rgba(253,224,71,1), 0 0 56px rgba(245,158,11,0.9), 0 0 12px white"
-                  : "0 0 20px rgba(34,211,238,1), 0 0 40px rgba(6,182,212,0.9), 0 0 60px rgba(34,211,238,0.5), 0 0 10px white",
+                boxShadow: DIAMOND_STYLES[diamondType].boxShadow,
                 filter: "brightness(1.3)",
               }} />
             </div>
@@ -2879,21 +2878,21 @@ function ArenaPageContent() {
             >
               <defs>
                 <linearGradient id={gradId} gradientUnits="userSpaceOnUse" x1={hx} y1={hy} x2={bx} y2={by}>
-                  <stop offset="0%"   stopColor="#22d3ee" stopOpacity="0.30" />
-                  <stop offset="50%"  stopColor="#67e8f9" stopOpacity="0.65" />
-                  <stop offset="100%" stopColor="#f0f9ff" stopOpacity="0.85" />
+                  <stop offset="0%"   stopColor={BEAM_COLORS[diamondType].c0} stopOpacity="0.30" />
+                  <stop offset="50%"  stopColor={BEAM_COLORS[diamondType].c1} stopOpacity="0.65" />
+                  <stop offset="100%" stopColor={BEAM_COLORS[diamondType].c2} stopOpacity="0.85" />
                 </linearGradient>
               </defs>
               {/* Outer soft glow halo */}
-              <line x1={hx} y1={hy} x2={bx} y2={by} stroke={phase === "shooting" ? "rgba(34,211,238,0.55)" : "rgba(34,211,238,0.12)"} strokeWidth={phase === "shooting" ? 28 : 16} strokeLinecap="round" style={phase === "shooting" ? { animation: "shoot-beam-flash 380ms ease-out forwards" } : undefined} />
+              <line x1={hx} y1={hy} x2={bx} y2={by} stroke={phase === "shooting" ? `rgba(${BEAM_COLORS[diamondType].halo},0.55)` : `rgba(${BEAM_COLORS[diamondType].halo},0.12)`} strokeWidth={phase === "shooting" ? 28 : 16} strokeLinecap="round" style={phase === "shooting" ? { animation: "shoot-beam-flash 380ms ease-out forwards" } : undefined} />
               {/* Mid glow */}
-              <line x1={hx} y1={hy} x2={bx} y2={by} stroke={phase === "shooting" ? "rgba(103,232,249,0.80)" : "rgba(103,232,249,0.30)"} strokeWidth={phase === "shooting" ? 10 : 6} strokeLinecap="round" />
+              <line x1={hx} y1={hy} x2={bx} y2={by} stroke={phase === "shooting" ? `rgba(${BEAM_COLORS[diamondType].mid},0.80)` : `rgba(${BEAM_COLORS[diamondType].mid},0.30)`} strokeWidth={phase === "shooting" ? 10 : 6} strokeLinecap="round" />
               {/* Main beam */}
               <line x1={hx} y1={hy} x2={bx} y2={by} stroke={`url(#${gradId})`} strokeWidth={phase === "shooting" ? 5 : 2.5} strokeLinecap="round" />
               {/* Bright core */}
               <line x1={hx} y1={hy} x2={bx} y2={by} stroke={phase === "shooting" ? "rgba(255,255,255,1)" : "rgba(240,249,255,0.70)"} strokeWidth={phase === "shooting" ? 2.5 : 1} strokeLinecap="round" />
               {/* Spark dot at beam tip */}
-              <circle cx={bx} cy={by} r={phase === "shooting" ? 9 : 5} fill={phase === "shooting" ? "rgba(34,211,238,0.9)" : "rgba(34,211,238,0.55)"} />
+              <circle cx={bx} cy={by} r={phase === "shooting" ? 9 : 5} fill={phase === "shooting" ? `rgba(${BEAM_COLORS[diamondType].dot},0.9)` : `rgba(${BEAM_COLORS[diamondType].dot},0.55)`} />
               <circle cx={bx} cy={by} r={phase === "shooting" ? 4.5 : 2.5} fill="rgba(255,255,255,0.95)" />
             </svg>
           );
