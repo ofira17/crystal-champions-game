@@ -1493,9 +1493,12 @@ function ArenaPageContent() {
       // Lock trigger — fires as soon as the enemy enters detection range (beam lock).
       // No body collision required: range is 40 arena-% units so the question opens
       // the moment the enemy approaches, well before physical contact.
-      const LOCK_DIST = 22;
+      // LOCK_DIST must be >= max(KEEP_DIST_CLAMP) so the trigger fires before the
+      // enemy settles into its orbit.  All archetypes clamp at 25–28; 34 gives a
+      // comfortable buffer so the question opens as the enemy approaches.
+      const LOCK_DIST = 34;
       if (phase === "battle" && !stagingRef.current && age > 0.5) {
-        if (dist <= LOCK_DIST && now - lastContactRef.current > 400) {
+        if (dist <= LOCK_DIST && now - lastContactRef.current > 500) {
           lastContactRef.current = now;
           handleFireCrystalRef.current?.();
         }
@@ -1635,6 +1638,8 @@ function ArenaPageContent() {
   // ── Open challenge card ────────────────────────────────────────────────────
   function handleFireCrystal() {
     if (phase !== "battle" || isPending) return;
+    // No question available — don't enter challenge or the beam will be stuck forever.
+    if (!questions[current]) return;
     // Trigger attack visual for 600ms before opening challenge
     if (attackTimerRef.current) clearTimeout(attackTimerRef.current);
     if (!muted) {
