@@ -16,20 +16,29 @@ function inferFromText(text: string): DiamondType {
  * Returns the diamond/beam visual type for a crystal shot.
  * Used ONLY for beam/projectile/effect visuals.
  * Does NOT affect questions, correctness, Grade 1 validation, rewards, enemies, or auth.
+ *
+ * Priority:
+ * 1. isBossQuestion / difficulty=challenge / castle-door mode → rainbow
+ * 2. streak ≥ 3 → gold
+ * 3. difficulty: easy→blue, medium→red, hard→rainbow
+ * 4. Grade 1 text inference
+ * 5. unknown → blue
  */
 export function getDiamondType(
   questionText: string,
   difficulty: string,
   streak: number,
+  isBossQuestion = false,   // pass true for boss / challenge / castle-door context
 ): DiamondType {
   const d = (difficulty ?? "").toLowerCase();
-  // 1. Boss / challenge / hard → rainbow
-  if (d === "hard" || d === "challenge") return "rainbow";
+  // 1. Boss / challenge / castle-door → rainbow
+  if (isBossQuestion || d === "challenge") return "rainbow";
   // 2. 3+ correct streak → gold
   if (streak >= 3) return "gold";
   // 3. Known difficulty field
-  if (d === "easy") return "blue";
+  if (d === "easy")   return "blue";
   if (d === "medium") return "red";
+  if (d === "hard")   return "rainbow";
   // 4. Infer from Grade 1 math question text
   return inferFromText(questionText);
 }
