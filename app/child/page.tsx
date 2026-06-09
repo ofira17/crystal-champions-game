@@ -1,7 +1,3 @@
-// Child dashboard — background image only + transparent hit areas
-// Visual design = /child-hub-bg.png (the approved image IS the UI)
-// Only invisible click targets are overlaid — no duplicate rendering
-
 import { requireRole } from "@/lib/auth/helpers";
 import { createClient } from "@/lib/supabase/server";
 import { getChildDashboardData } from "@/app/actions/child-dashboard";
@@ -23,8 +19,8 @@ export default async function ChildPage() {
     <>
       <style>{`
         html,body{margin:0;padding:0;overflow:hidden}
-        .hit:hover{background:rgba(255,255,255,0.06)!important}
-        .hit:active{background:rgba(255,255,255,0.12)!important}
+        .ghost{background:transparent!important;border:none!important;box-shadow:none!important;outline:none!important;opacity:0!important;}
+        .ghost:hover,.ghost:focus,.ghost:active{background:transparent!important;border:none!important;box-shadow:none!important;outline:none!important;opacity:0!important;}
       `}</style>
 
       <main dir="rtl" style={{
@@ -37,72 +33,40 @@ export default async function ChildPage() {
       }}>
 
         {/* Hero hit area → /child/heroes */}
-        <Link href="/child/heroes" className="hit" style={{
+        <Link href="/child/heroes" className="ghost" style={{
           position: "absolute",
           top: "13%", left: "50%",
           transform: "translateX(-50%)",
           width: "min(280px,20vw)",
           height: "55%",
-          background: "transparent",
-          borderRadius: 24,
-          zIndex: 20,
           display: "block",
+          cursor: "pointer",
+          zIndex: 20,
         }} aria-label="גיבור" />
 
-        {/* Arena button hit area */}
-        <div style={{
-          position: "absolute",
-          top: "74%", left: "50%",
-          transform: "translateX(-50%)",
-          width: "min(640px,44%)",
-          zIndex: 25,
-          display: "flex",
-          flexDirection: "column",
-          gap: 8,
-        }}>
-          {arenaHref ? (
-            <>
-              <Link href={arenaHref} className="hit" style={{
-                display: "block",
-                height: "clamp(50px,6.5vh,72px)",
-                background: "transparent",
-                borderRadius: 18,
-              }} aria-label="כניסה לזירה" />
-              {/* second CTA line in image */}
-              <Link href={arenaHref} className="hit" style={{
-                display: "block",
-                height: "clamp(44px,5.5vh,64px)",
-                background: "transparent",
-                borderRadius: 18,
-              }} aria-label="כניסה לזירה" />
-            </>
-          ) : (
-            <>
-              <div style={{ height: "clamp(50px,6.5vh,72px)" }} />
-              <div style={{ height: "clamp(44px,5.5vh,64px)" }} />
-            </>
-          )}
-        </div>
-
-        {/* World card hit areas row */}
-        <div style={{
-          position: "absolute",
-          top: "84%", left: 0, right: 0,
-          padding: "0 1%",
-          zIndex: 20,
-          display: "grid",
-          gridTemplateColumns: "repeat(5,1fr)",
-          gap: "0.7%",
-          height: "clamp(80px,9vh,105px)",
-        }}>
-          {[0,1,2,3,4].map(i => (
-            <div key={i} className="hit" style={{
-              borderRadius: 16,
-              background: "transparent",
-              cursor: "default",
-            }} />
-          ))}
-        </div>
+        {/* Arena primary CTA hit area */}
+        {arenaHref ? (
+          <Link href={arenaHref} className="ghost" style={{
+            position: "absolute",
+            top: "73%", left: "50%",
+            transform: "translateX(-50%)",
+            width: "min(640px,44%)",
+            height: "14%",
+            display: "block",
+            cursor: "pointer",
+            zIndex: 25,
+          }} aria-label="כניסה לזירה" />
+        ) : (
+          <div style={{
+            position: "absolute",
+            top: "73%", left: "50%",
+            transform: "translateX(-50%)",
+            width: "min(640px,44%)",
+            height: "14%",
+            zIndex: 25,
+            cursor: "not-allowed",
+          }} />
+        )}
 
       </main>
     </>
