@@ -1,7 +1,7 @@
 // ══════════════════════════════════════════════════════════
 // Child dashboard — full fantasy hub screen.
 // Visual target: illustrated game hub with castle, crystals,
-// hero, panels, world cards. All data is real DB data.
+// hero standing freely on glowing platform, world cards.
 // ══════════════════════════════════════════════════════════
 
 import { requireRole } from "@/lib/auth/helpers";
@@ -16,34 +16,48 @@ import {
   type MissionType,
 } from "@/lib/terminology";
 import Link from "next/link";
-import { HeroDisplay } from "@/components/child/HeroDisplay";
-import { ArenaButton } from "@/components/child/ArenaButton";
+import Image from "next/image";
 import LogoutButton from "@/components/auth/LogoutButton";
+import {
+  getHeroImage,
+  BOY_IMAGES,
+  GIRL_IMAGES,
+  GILAD_IMAGES,
+} from "@/components/child/HeroDisplay";
 
+// ── World card visual theme per slot ─────────────────────────────────────────
 const WORLD_CARD_STYLES = [
   {
-    cardIcon: "📦",
-    gradFrom: "#4a2800", gradTo: "#7a4800",
-    border: "#c97f00", bdrShadow: "#3a2000",
-    glowColor: "rgba(201,127,0,0.45)",
+    icon: "📦",
+    label: "חוק הקריסטל מכוחו",
+    desc: "שאלות חיימום לקליטה",
+    gradFrom: "#3d1e00", gradTo: "#7a4000",
+    border: "#c97f00", shadow: "#3a2000",
+    glow: "rgba(201,127,0,0.5)",
   },
   {
-    cardIcon: "🗺️",
-    gradFrom: "#4a0a0a", gradTo: "#701515",
-    border: "#b91c1c", bdrShadow: "#3d0a0a",
-    glowColor: "rgba(185,28,28,0.4)",
+    icon: "🗺️",
+    label: "מדרגה הידע",
+    desc: "אתגרי חיבור – שלב ההתעלות!",
+    gradFrom: "#420a0a", gradTo: "#661212",
+    border: "#b91c1c", shadow: "#3d0a0a",
+    glow: "rgba(185,28,28,0.45)",
   },
   {
-    cardIcon: "🌳",
-    gradFrom: "#062a1c", gradTo: "#054a30",
-    border: "#059669", bdrShadow: "#042d1c",
-    glowColor: "rgba(5,150,105,0.4)",
+    icon: "🌳",
+    label: "יער הקסמים",
+    desc: "שלבים מתקדמים לחקירה",
+    gradFrom: "#052218", gradTo: "#044228",
+    border: "#059669", shadow: "#032a1a",
+    glow: "rgba(5,150,105,0.45)",
   },
   {
-    cardIcon: "🏰",
-    gradFrom: "#07162e", gradTo: "#102848",
-    border: "#2563eb", bdrShadow: "#061020",
-    glowColor: "rgba(37,99,235,0.4)",
+    icon: "🏰",
+    label: "מגדל הזכויות",
+    desc: "שלב אלופי הקריסטלים",
+    gradFrom: "#06122a", gradTo: "#0e2244",
+    border: "#2563eb", shadow: "#050e20",
+    glow: "rgba(37,99,235,0.45)",
   },
 ];
 
@@ -77,9 +91,7 @@ export default async function ChildPage() {
 
   const speechText = hasAdventure && activeAdventure.story_text_he
     ? activeAdventure.story_text_he
-    : hasAdventure
-      ? CHILD_ADVENTURE_SUBTITLES[adventureType]
-      : "כל שאלה נכונה – עוד צעד אל הניצחון!";
+    : "כל שאלה נכונה – עוד צעד אל הניצחון!";
 
   const overallProgress = worlds.length > 0
     ? Math.round(
@@ -88,366 +100,356 @@ export default async function ChildPage() {
       )
     : 0;
 
+  // Build hero image path (frameless transparent PNG)
+  const heroImgSrc = getHeroImage(heroGender, heroType, 0);
+
   return (
     <main
       dir="rtl"
-      className="relative min-h-screen flex flex-col overflow-hidden"
-      style={{ background: "#0a0320", fontFamily: "var(--font-sans)" }}
+      className="relative min-h-screen flex flex-col overflow-hidden select-none"
+      style={{ background: "#080220", fontFamily: "var(--font-sans)" }}
     >
+
       {/* ══════════════════════════════════════════
-          FULL FANTASY BACKGROUND SCENE
+          FANTASY BACKGROUND SCENE
       ══════════════════════════════════════════ */}
       <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 0 }}>
 
-        {/* Sky gradient */}
+        {/* Deep sky gradient */}
         <div className="absolute inset-0" style={{
-          background: "linear-gradient(180deg, #07021a 0%, #120540 25%, #1e0855 45%, #2a0f68 60%, #1a0840 80%, #0e0430 100%)",
+          background: "linear-gradient(180deg, #04010f 0%, #0e0430 18%, #1a0750 32%, #280c70 48%, #1e0858 65%, #120438 82%, #08021a 100%)",
         }} />
 
-        {/* Nebula clouds */}
-        <div className="absolute" style={{
-          top: 0, left: 0, right: 0, height: "65%",
+        {/* Central nebula bloom */}
+        <div className="absolute inset-0" style={{
           background: `
-            radial-gradient(ellipse 80% 50% at 50% -10%, rgba(100,40,200,0.55) 0%, transparent 70%),
-            radial-gradient(ellipse 60% 40% at 80% 20%, rgba(50,20,160,0.45) 0%, transparent 65%),
-            radial-gradient(ellipse 50% 35% at 20% 25%, rgba(80,10,160,0.4) 0%, transparent 60%)
+            radial-gradient(ellipse 90% 55% at 50% 5%, rgba(90,30,180,0.65) 0%, transparent 65%),
+            radial-gradient(ellipse 55% 40% at 15% 30%, rgba(60,15,150,0.45) 0%, transparent 60%),
+            radial-gradient(ellipse 50% 35% at 85% 25%, rgba(40,10,140,0.4) 0%, transparent 55%),
+            radial-gradient(ellipse 70% 30% at 50% 90%, rgba(20,5,80,0.7) 0%, transparent 70%)
           `,
         }} />
 
-        {/* Stars layer — many small */}
-        {Array.from({ length: 60 }).map((_, i) => {
+        {/* Stars */}
+        {Array.from({ length: 80 }).map((_, i) => {
           const size = 1 + (i % 3);
-          const x    = ((i * 137 + 17) % 98) + 1;
-          const y    = ((i * 79  + 31) % 55) + 1;
-          const op   = 0.25 + (i % 7) * 0.1;
+          const x    = ((i * 137 + 17) % 96) + 2;
+          const y    = ((i * 79  + 31) % 52) + 1;
+          const op   = 0.3 + (i % 6) * 0.1;
           return (
             <div key={i} className="absolute rounded-full bg-white" style={{
               width: size, height: size,
               left: `${x}%`, top: `${y}%`,
               opacity: op,
-              boxShadow: size > 1 ? `0 0 ${size * 2}px rgba(200,200,255,0.6)` : "none",
+              boxShadow: size > 1 ? `0 0 ${size * 2}px rgba(200,200,255,0.5)` : "none",
             }} />
           );
         })}
 
         {/* Bright star clusters */}
         {[
-          { x: 15, y: 8, r: 3 }, { x: 45, y: 5, r: 2.5 }, { x: 72, y: 12, r: 3 },
-          { x: 88, y: 7, r: 2 }, { x: 30, y: 18, r: 2 },  { x: 60, y: 3,  r: 2.5 },
+          { x: 12, y: 6,  r: 3 },  { x: 42, y: 4, r: 2.5 }, { x: 68, y: 9, r: 3 },
+          { x: 85, y: 5,  r: 2.5 }, { x: 27, y: 14, r: 2 }, { x: 57, y: 2, r: 2.5 },
+          { x: 78, y: 18, r: 2 },   { x: 6,  y: 20, r: 2 },
         ].map((s, i) => (
           <div key={i} className="absolute rounded-full bg-white" style={{
             width: s.r * 2, height: s.r * 2,
             left: `${s.x}%`, top: `${s.y}%`,
-            opacity: 0.9,
-            boxShadow: `0 0 ${s.r * 4}px ${s.r * 2}px rgba(200,180,255,0.5), 0 0 ${s.r * 8}px rgba(150,100,255,0.3)`,
+            opacity: 0.95,
+            boxShadow: `0 0 ${s.r * 5}px ${s.r * 2.5}px rgba(210,190,255,0.5), 0 0 ${s.r * 10}px rgba(160,120,255,0.3)`,
           }} />
         ))}
 
         {/* ── FLOATING ISLANDS ── */}
-        {/* Island 1 - upper left area */}
-        <div className="absolute" style={{ left: "4%", top: "8%", width: "120px", height: "55px" }}>
+        {/* Island 1 – upper left */}
+        <div className="absolute" style={{ left: "3%", top: "6%", width: "130px", height: "60px" }}>
           <div style={{
-            width: "100%", height: "35px",
-            background: "linear-gradient(to bottom, #3d2a6e 0%, #1e1040 100%)",
-            borderRadius: "50% 50% 40% 40% / 60% 60% 40% 40%",
-            boxShadow: "0 4px 20px rgba(100,50,220,0.5), 0 8px 30px rgba(0,0,0,0.6)",
+            width: "100%", height: "38px",
+            background: "linear-gradient(160deg, #4a2e80 0%, #1e1040 100%)",
+            borderRadius: "50% 50% 38% 38% / 58% 58% 42% 42%",
+            boxShadow: "0 6px 24px rgba(100,50,220,0.55), 0 10px 36px rgba(0,0,0,0.65)",
           }} />
           <div style={{
-            width: "80%", marginLeft: "10%", height: "20px", marginTop: "-5px",
-            background: "linear-gradient(to bottom, #2a6040 0%, #143020 100%)",
+            width: "76%", marginLeft: "12%", height: "22px", marginTop: "-5px",
+            background: "linear-gradient(160deg, #2a6840 0%, #143020 100%)",
             borderRadius: "0 0 50% 50%",
-            boxShadow: "0 6px 16px rgba(0,0,0,0.7)",
+            boxShadow: "0 8px 20px rgba(0,0,0,0.7)",
           }} />
-          {/* Crystals on island 1 */}
-          {[{ x: 20, color: "#a855f7" }, { x: 50, color: "#38bdf8" }, { x: 75, color: "#e879f9" }].map((c, j) => (
+          {[{ x: 18, c: "#a855f7" }, { x: 48, c: "#38bdf8" }, { x: 74, c: "#e879f9" }].map((cr, j) => (
             <div key={j} className="absolute particle" style={{
-              left: `${c.x}%`, top: "-18px",
-              width: "10px", height: "18px",
-              background: `linear-gradient(160deg, white 0%, ${c.color} 50%)`,
+              left: `${cr.x}%`, top: "-20px",
+              width: "10px", height: "20px",
+              background: `linear-gradient(160deg, white 0%, ${cr.c} 55%)`,
               clipPath: "polygon(50% 0%, 100% 35%, 75% 100%, 25% 100%, 0% 35%)",
-              filter: `drop-shadow(0 0 6px ${c.color}) drop-shadow(0 0 12px ${c.color}88)`,
-              animationDuration: `${4 + j * 1.5}s`,
+              filter: `drop-shadow(0 0 7px ${cr.c}) drop-shadow(0 0 14px ${cr.c}88)`,
+              animationDuration: `${4.5 + j * 1.3}s`,
             }} />
           ))}
         </div>
 
-        {/* Island 2 - upper center-left */}
-        <div className="absolute" style={{ left: "22%", top: "3%", width: "90px", height: "45px" }}>
+        {/* Island 2 – upper center-left */}
+        <div className="absolute" style={{ left: "20%", top: "2%", width: "95px", height: "48px" }}>
           <div style={{
-            width: "100%", height: "28px",
-            background: "linear-gradient(to bottom, #4a2080 0%, #220e50 100%)",
-            borderRadius: "50% 50% 40% 40% / 60% 60% 40% 40%",
-            boxShadow: "0 4px 16px rgba(130,60,240,0.4)",
+            width: "100%", height: "30px",
+            background: "linear-gradient(160deg, #4a1e82 0%, #22104a 100%)",
+            borderRadius: "50% 50% 38% 38% / 58% 58% 42% 42%",
+            boxShadow: "0 5px 18px rgba(130,60,240,0.45)",
           }} />
           <div style={{
-            width: "70%", marginLeft: "15%", height: "16px", marginTop: "-4px",
-            background: "linear-gradient(to bottom, #1a5030 0%, #0c2818 100%)",
+            width: "68%", marginLeft: "16%", height: "17px", marginTop: "-4px",
+            background: "linear-gradient(160deg, #1c5030 0%, #0c2818 100%)",
             borderRadius: "0 0 50% 50%",
           }} />
-          {/* Crystal on island 2 */}
           <div className="absolute particle" style={{
-            left: "40%", top: "-14px",
-            width: "8px", height: "14px",
-            background: "linear-gradient(160deg, white 0%, #7c3aed 50%)",
+            left: "38%", top: "-16px",
+            width: "9px", height: "16px",
+            background: "linear-gradient(160deg, white 0%, #7c3aed 55%)",
             clipPath: "polygon(50% 0%, 100% 35%, 75% 100%, 25% 100%, 0% 35%)",
-            filter: "drop-shadow(0 0 6px #7c3aed)",
+            filter: "drop-shadow(0 0 7px #7c3aed)",
             animationDuration: "5.5s",
           }} />
         </div>
 
-        {/* Island 3 - right upper */}
-        <div className="absolute" style={{ right: "28%", top: "5%", width: "70px", height: "40px" }}>
+        {/* Island 3 – upper right-center */}
+        <div className="absolute" style={{ right: "26%", top: "4%", width: "75px", height: "42px" }}>
           <div style={{
-            width: "100%", height: "25px",
-            background: "linear-gradient(to bottom, #3a1870 0%, #1c0c3c 100%)",
-            borderRadius: "50% 50% 40% 40% / 60% 60% 40% 40%",
-            boxShadow: "0 4px 16px rgba(100,40,200,0.4)",
+            width: "100%", height: "27px",
+            background: "linear-gradient(160deg, #3c1a72 0%, #1c0c3c 100%)",
+            borderRadius: "50% 50% 38% 38% / 58% 58% 42% 42%",
+            boxShadow: "0 5px 18px rgba(100,40,200,0.4)",
           }} />
           <div style={{
             width: "60%", marginLeft: "20%", height: "14px", marginTop: "-3px",
-            background: "linear-gradient(to bottom, #205040 0%, #0e2820 100%)",
+            background: "linear-gradient(160deg, #225040 0%, #0e2820 100%)",
             borderRadius: "0 0 50% 50%",
           }} />
+          {[{ x: 30, c: "#f59e0b" }, { x: 60, c: "#a855f7" }].map((cr, j) => (
+            <div key={j} className="absolute particle" style={{
+              left: `${cr.x}%`, top: "-14px",
+              width: "8px", height: "14px",
+              background: `linear-gradient(160deg, white 0%, ${cr.c} 55%)`,
+              clipPath: "polygon(50% 0%, 100% 35%, 75% 100%, 25% 100%, 0% 35%)",
+              filter: `drop-shadow(0 0 6px ${cr.c})`,
+              animationDuration: `${4 + j}s`,
+            }} />
+          ))}
         </div>
 
-        {/* ── CASTLE (right side) ── */}
-        <div className="absolute" style={{
-          right: "2%", bottom: "14%",
-          width: "280px", height: "360px",
-        }}>
-          {/* Castle ambient glow */}
+        {/* ── LARGE CASTLE – right side ── */}
+        <div className="absolute" style={{ right: "0%", bottom: "8%", width: "320px", height: "420px" }}>
+          {/* Ambient glow behind castle */}
           <div className="absolute" style={{
             bottom: 0, left: "50%", transform: "translateX(-50%)",
-            width: "300px", height: "200px",
-            background: "radial-gradient(ellipse, rgba(100,40,220,0.35) 0%, rgba(60,20,160,0.2) 50%, transparent 75%)",
-            filter: "blur(20px)",
+            width: "320px", height: "220px",
+            background: "radial-gradient(ellipse, rgba(120,50,230,0.4) 0%, rgba(60,20,160,0.2) 55%, transparent 80%)",
+            filter: "blur(24px)",
           }} />
 
-          {/* Castle base wall */}
-          <svg viewBox="0 0 280 360" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} xmlns="http://www.w3.org/2000/svg">
+          <svg viewBox="0 0 320 420" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible" }} xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <linearGradient id="castleWall" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#3d2570" />
-                <stop offset="100%" stopColor="#180d38" />
+              <linearGradient id="cw" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#42287a" />
+                <stop offset="100%" stopColor="#1a0c40" />
               </linearGradient>
-              <linearGradient id="castleTower" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#4a2e82" />
-                <stop offset="100%" stopColor="#1e0f46" />
+              <linearGradient id="ct" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#4e3290" />
+                <stop offset="100%" stopColor="#20104c" />
               </linearGradient>
-              <linearGradient id="castleRoof" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#5c3aaa" />
-                <stop offset="100%" stopColor="#2e1a60" />
+              <linearGradient id="cr" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#6040b8" />
+                <stop offset="100%" stopColor="#301870" />
               </linearGradient>
-              <filter id="castleGlow">
-                <feGaussianBlur stdDeviation="3" result="blur"/>
-                <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-              </filter>
+              <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="rgba(255,140,20,0.85)" />
+                <stop offset="100%" stopColor="rgba(255,80,0,0)" />
+              </radialGradient>
             </defs>
 
             {/* Main wall */}
-            <rect x="40" y="200" width="200" height="160" fill="url(#castleWall)" />
+            <rect x="50" y="230" width="220" height="190" fill="url(#cw)" />
 
-            {/* Gate arch */}
-            <rect x="115" y="260" width="50" height="100" fill="#0a0420" />
-            <ellipse cx="140" cy="260" rx="25" ry="18" fill="#0a0420" />
+            {/* Gate */}
+            <rect x="130" y="295" width="60" height="125" fill="#080210" />
+            <ellipse cx="160" cy="295" rx="30" ry="22" fill="#080210" />
+            {/* Gate warm glow */}
+            <ellipse cx="160" cy="318" rx="26" ry="30" fill="url(#glow)" opacity="0.18" />
 
-            {/* Gate glow (warm light from inside) */}
-            <ellipse cx="140" cy="280" rx="22" ry="28" fill="rgba(255,140,30,0.12)" />
-
-            {/* Battlements */}
-            {[50, 70, 90, 110, 140, 170, 200, 220].map((x, i) => (
-              <rect key={i} x={x} y={190} width={14} height={20} fill="url(#castleWall)" rx={2} />
+            {/* Wall battlements */}
+            {[56, 76, 96, 116, 152, 182, 212, 234, 256].map((x, i) => (
+              <rect key={i} x={x} y={218} width={14} height={22} fill="url(#cw)" rx={2} />
             ))}
 
             {/* Left tower */}
-            <rect x="20" y="140" width="55" height="220" fill="url(#castleTower)" />
-            {/* Left tower battlements */}
-            {[20, 35, 50, 60].map((x, i) => (
-              <rect key={i} x={x} y={128} width={12} height={20} fill="url(#castleTower)" rx={2} />
+            <rect x="28" y="160" width="62" height="260" fill="url(#ct)" />
+            {[28, 44, 58, 72].map((x, i) => (
+              <rect key={i} x={x} y={147} width={13} height={22} fill="url(#ct)" rx={2} />
             ))}
-            {/* Left tower roof */}
-            <polygon points="47,60 20,140 75,140" fill="url(#castleRoof)" />
-            {/* Left tower flag */}
-            <line x1="47" y1="60" x2="47" y2="20" stroke="#c084fc" strokeWidth="2" />
-            <polygon points="47,20 65,30 47,42" fill="#a855f7" />
+            <polygon points="59,70 28,160 90,160" fill="url(#cr)" />
+            <line x1="59" y1="70" x2="59" y2="24" stroke="#c084fc" strokeWidth="2.5" />
+            <polygon points="59,24 80,36 59,50" fill="#a855f7" />
 
             {/* Right tower */}
-            <rect x="205" y="130" width="60" height="230" fill="url(#castleTower)" />
-            {/* Right tower battlements */}
-            {[205, 220, 235, 250].map((x, i) => (
-              <rect key={i} x={x} y={118} width={12} height={20} fill="url(#castleTower)" rx={2} />
+            <rect x="230" y="148" width="66" height="272" fill="url(#ct)" />
+            {[230, 247, 262, 278].map((x, i) => (
+              <rect key={i} x={x} y={134} width={13} height={22} fill="url(#ct)" rx={2} />
             ))}
-            {/* Right tower roof */}
-            <polygon points="235,50 205,130 265,130" fill="url(#castleRoof)" />
-            {/* Right tower flag */}
-            <line x1="235" y1="50" x2="235" y2="8" stroke="#c084fc" strokeWidth="2" />
-            <polygon points="235,8 255,20 235,32" fill="#7c3aed" />
+            <polygon points="263,56 230,148 296,148" fill="url(#cr)" />
+            <line x1="263" y1="56" x2="263" y2="10" stroke="#c084fc" strokeWidth="2.5" />
+            <polygon points="263,10 286,24 263,38" fill="#7c3aed" />
 
-            {/* Center tower (tallest) */}
-            <rect x="110" y="100" width="60" height="260" fill="url(#castleTower)" />
-            {/* Center tower battlements */}
-            {[110, 125, 140, 155].map((x, i) => (
-              <rect key={i} x={x} y={88} width={13} height={22} fill="url(#castleTower)" rx={2} />
+            {/* Center tower */}
+            <rect x="128" y="112" width="64" height="308" fill="url(#ct)" />
+            {[128, 143, 158, 173].map((x, i) => (
+              <rect key={i} x={x} y={96} width={13} height={24} fill="url(#ct)" rx={2} />
             ))}
-            {/* Center tower roof */}
-            <polygon points="140,15 110,100 170,100" fill="url(#castleRoof)" />
-            {/* Center tower flag */}
-            <line x1="140" y1="15" x2="140" y2="-15" stroke="#e879f9" strokeWidth="2.5" />
-            <polygon points="140,-15 162,-3 140,10" fill="#d946ef" />
+            <polygon points="160,18 128,112 192,112" fill="url(#cr)" />
+            <line x1="160" y1="18" x2="160" y2="-18" stroke="#e879f9" strokeWidth="3" />
+            <polygon points="160,-18 185,-4 160,12" fill="#d946ef" />
 
-            {/* Windows — glowing amber/orange */}
-            {/* Left tower windows */}
-            <ellipse cx="47" cy="175" rx="8" ry="10" fill="#ff8c00" opacity="0.85" filter="url(#castleGlow)" />
-            <ellipse cx="47" cy="195" rx="5" ry="6" fill="#ffa020" opacity="0.6" />
+            {/* Windows — glowing */}
+            <ellipse cx="59" cy="195" rx="9" ry="11" fill="#ff8c00" opacity="0.9" />
+            <ellipse cx="59" cy="220" rx="6" ry="7" fill="#ffa020" opacity="0.6" />
+            <ellipse cx="160" cy="158" rx="10" ry="12" fill="#ff8c00" opacity="0.95" />
+            <ellipse cx="160" cy="186" rx="7" ry="8" fill="#ffb040" opacity="0.7" />
+            <ellipse cx="160" cy="240" rx="9" ry="11" fill="#ff7c00" opacity="0.75" />
+            <ellipse cx="263" cy="184" rx="9" ry="11" fill="#ff8c00" opacity="0.9" />
+            <ellipse cx="263" cy="212" rx="6" ry="7" fill="#ffa020" opacity="0.6" />
+            <ellipse cx="100" cy="270" rx="8" ry="10" fill="#ff8c00" opacity="0.7" />
+            <ellipse cx="220" cy="270" rx="8" ry="10" fill="#ff8c00" opacity="0.7" />
 
-            {/* Center tower windows */}
-            <ellipse cx="140" cy="145" rx="9" ry="11" fill="#ff8c00" opacity="0.9" filter="url(#castleGlow)" />
-            <ellipse cx="140" cy="170" rx="6" ry="7" fill="#ffb040" opacity="0.65" />
-            <ellipse cx="140" cy="220" rx="8" ry="10" fill="#ff7c00" opacity="0.7" />
-
-            {/* Right tower windows */}
-            <ellipse cx="235" cy="165" rx="8" ry="10" fill="#ff8c00" opacity="0.85" filter="url(#castleGlow)" />
-            <ellipse cx="235" cy="190" rx="5" ry="6" fill="#ffa020" opacity="0.6" />
-
-            {/* Wall windows */}
-            <ellipse cx="90" cy="240" rx="7" ry="9" fill="#ff8c00" opacity="0.7" />
-            <ellipse cx="190" cy="240" rx="7" ry="9" fill="#ff8c00" opacity="0.7" />
-
-            {/* Ground path */}
-            <ellipse cx="140" cy="360" rx="90" ry="18" fill="rgba(80,40,160,0.3)" />
-
-            {/* Stone texture lines */}
-            {[210, 230, 250, 270, 290, 310, 330].map((y, i) => (
-              <line key={i} x1="40" y1={y} x2="240" y2={y} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+            {/* Stone texture */}
+            {[240, 262, 284, 306, 328, 350, 370, 390].map((y, i) => (
+              <line key={i} x1="50" y1={y} x2="270" y2={y} stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
             ))}
+
+            {/* Ground glow */}
+            <ellipse cx="160" cy="420" rx="120" ry="20" fill="rgba(80,40,180,0.35)" />
           </svg>
 
-          {/* Castle purple glow aura */}
+          {/* Castle base glow */}
           <div className="absolute" style={{
-            bottom: "10px", left: "50%", transform: "translateX(-50%)",
-            width: "200px", height: "80px",
-            background: "radial-gradient(ellipse, rgba(120,60,240,0.6) 0%, transparent 70%)",
-            filter: "blur(15px)",
+            bottom: "8px", left: "50%", transform: "translateX(-50%)",
+            width: "240px", height: "90px",
+            background: "radial-gradient(ellipse, rgba(130,65,250,0.65) 0%, transparent 75%)",
+            filter: "blur(18px)",
           }} />
         </div>
 
-        {/* ── PATH TO CASTLE (glowing road) ── */}
+        {/* Glowing path to castle */}
         <div className="absolute" style={{
-          bottom: "12%", right: "10%",
-          width: "200px", height: "80px",
-          background: "linear-gradient(to right, transparent 0%, rgba(120,60,200,0.2) 30%, rgba(140,80,220,0.35) 60%, transparent 100%)",
+          bottom: "10%", right: "8%",
+          width: "220px", height: "90px",
+          background: "linear-gradient(to right, transparent 0%, rgba(110,55,200,0.25) 40%, rgba(140,80,230,0.4) 70%, transparent 100%)",
           borderRadius: "50%",
-          filter: "blur(8px)",
-          transform: "perspective(200px) rotateX(60deg)",
+          filter: "blur(10px)",
+          transform: "perspective(200px) rotateX(58deg)",
         }} />
 
-        {/* LANTERNS along path */}
+        {/* Lanterns */}
         {[
-          { right: "20%", bottom: "15%", color: "#f59e0b" },
-          { right: "15%", bottom: "13%", color: "#f59e0b" },
-          { right: "12%", bottom: "12%", color: "#f59e0b" },
+          { right: "22%", bottom: "14%", c: "#f59e0b" },
+          { right: "17%", bottom: "12%", c: "#f59e0b" },
+          { right: "13%", bottom: "11%", c: "#f59e0b" },
         ].map((l, i) => (
           <div key={i} className="absolute" style={{
             right: l.right, bottom: l.bottom,
-            width: "6px", height: "6px",
+            width: "7px", height: "7px",
             borderRadius: "50%",
-            background: l.color,
-            boxShadow: `0 0 8px 4px ${l.color}99, 0 0 16px 8px ${l.color}44`,
+            background: l.c,
+            boxShadow: `0 0 10px 5px ${l.c}aa, 0 0 20px 10px ${l.c}44`,
           }} />
         ))}
 
-        {/* ── LARGE CRYSTAL FORMATIONS ── */}
-        {/* Left side crystal cluster */}
-        <div className="absolute" style={{ left: "1%", top: "30%", display: "flex", gap: "4px", alignItems: "flex-end" }}>
+        {/* ── LEFT CRYSTAL FORMATIONS ── */}
+        <div className="absolute" style={{ left: "0.5%", top: "28%", display: "flex", gap: "5px", alignItems: "flex-end" }}>
           {[
-            { h: 60, w: 16, color: "#a855f7", delay: "0s" },
-            { h: 90, w: 20, color: "#7c3aed", delay: "0.5s" },
-            { h: 50, w: 14, color: "#c084fc", delay: "1s" },
+            { h: 65, w: 18, c: "#a855f7", dur: "4.8s" },
+            { h: 100, w: 22, c: "#7c3aed", dur: "5.8s", del: "0.5s" },
+            { h: 55, w: 15, c: "#c084fc", dur: "6.2s", del: "1.1s" },
+            { h: 40, w: 12, c: "#e879f9", dur: "5.1s", del: "0.8s" },
           ].map((c, i) => (
             <div key={i} className="particle" style={{
               width: `${c.w}px`, height: `${c.h}px`,
-              background: `linear-gradient(180deg, rgba(255,255,255,0.9) 0%, ${c.color} 35%, ${c.color}cc 100%)`,
+              background: `linear-gradient(180deg, rgba(255,255,255,0.95) 0%, ${c.c} 38%, ${c.c}cc 100%)`,
               clipPath: "polygon(50% 0%, 100% 30%, 80% 100%, 20% 100%, 0% 30%)",
-              filter: `drop-shadow(0 0 8px ${c.color}) drop-shadow(0 0 16px ${c.color}88)`,
-              animationDuration: `${5 + i * 1.2}s`,
-              animationDelay: c.delay,
+              filter: `drop-shadow(0 0 9px ${c.c}) drop-shadow(0 0 18px ${c.c}88)`,
+              animationDuration: c.dur,
+              animationDelay: (c as { del?: string }).del ?? "0s",
             }} />
           ))}
         </div>
 
-        {/* Left-center crystal cluster */}
+        {/* Left blue crystal */}
         <div className="absolute particle" style={{
-          left: "7%", top: "20%",
-          width: "22px", height: "38px",
-          background: "linear-gradient(180deg, rgba(255,255,255,0.9) 0%, #38bdf8 35%, #0891b2cc 100%)",
+          left: "7%", top: "18%",
+          width: "24px", height: "42px",
+          background: "linear-gradient(180deg, rgba(255,255,255,0.95) 0%, #38bdf8 38%, #0891b2cc 100%)",
           clipPath: "polygon(50% 0%, 100% 30%, 80% 100%, 20% 100%, 0% 30%)",
-          filter: "drop-shadow(0 0 10px #38bdf8) drop-shadow(0 0 20px #38bdf866)",
-          animationDuration: "6s",
+          filter: "drop-shadow(0 0 11px #38bdf8) drop-shadow(0 0 22px #38bdf866)",
+          animationDuration: "6.2s",
         }} />
 
-        {/* Right-side large crystal */}
+        {/* Right amber crystal */}
         <div className="absolute particle" style={{
-          right: "5%", top: "18%",
-          width: "26px", height: "46px",
-          background: "linear-gradient(180deg, rgba(255,255,255,0.9) 0%, #f59e0b 35%, #d97706cc 100%)",
+          right: "4.5%", top: "16%",
+          width: "28px", height: "50px",
+          background: "linear-gradient(180deg, rgba(255,255,255,0.95) 0%, #f59e0b 38%, #d97706cc 100%)",
           clipPath: "polygon(50% 0%, 100% 30%, 80% 100%, 20% 100%, 0% 30%)",
-          filter: "drop-shadow(0 0 10px #f59e0b) drop-shadow(0 0 20px #f59e0b66)",
-          animationDuration: "5.5s",
-          animationDelay: "0.8s",
+          filter: "drop-shadow(0 0 11px #f59e0b) drop-shadow(0 0 22px #f59e0b66)",
+          animationDuration: "5.6s",
+          animationDelay: "0.9s",
         }} />
 
-        {/* More right crystals */}
-        <div className="absolute" style={{ right: "3%", top: "32%", display: "flex", gap: "3px", alignItems: "flex-end" }}>
+        {/* Right crystal cluster */}
+        <div className="absolute" style={{ right: "2.5%", top: "30%", display: "flex", gap: "4px", alignItems: "flex-end" }}>
           {[
-            { h: 45, w: 14, color: "#a855f7", delay: "0.3s" },
-            { h: 68, w: 18, color: "#7c3aed", delay: "1.2s" },
-            { h: 38, w: 12, color: "#e879f9", delay: "0.7s" },
+            { h: 50, w: 15, c: "#a855f7", dur: "4.8s", del: "0.3s" },
+            { h: 75, w: 20, c: "#7c3aed", dur: "5.5s", del: "1.2s" },
+            { h: 42, w: 13, c: "#e879f9", dur: "4.2s", del: "0.7s" },
           ].map((c, i) => (
             <div key={i} className="particle" style={{
               width: `${c.w}px`, height: `${c.h}px`,
-              background: `linear-gradient(180deg, rgba(255,255,255,0.9) 0%, ${c.color} 35%, ${c.color}cc 100%)`,
+              background: `linear-gradient(180deg, rgba(255,255,255,0.95) 0%, ${c.c} 38%, ${c.c}cc 100%)`,
               clipPath: "polygon(50% 0%, 100% 30%, 80% 100%, 20% 100%, 0% 30%)",
-              filter: `drop-shadow(0 0 8px ${c.color}) drop-shadow(0 0 16px ${c.color}66)`,
-              animationDuration: `${4.5 + i * 1.3}s`,
-              animationDelay: c.delay,
+              filter: `drop-shadow(0 0 8px ${c.c}) drop-shadow(0 0 16px ${c.c}66)`,
+              animationDuration: c.dur,
+              animationDelay: c.del,
             }} />
           ))}
         </div>
 
-        {/* Dragon silhouette — upper left */}
-        <div className="absolute" style={{ left: "3%", top: "50%", opacity: 0.85 }}>
-          <svg viewBox="0 0 80 60" width="80" height="60" style={{ filter: "drop-shadow(0 0 8px #7c3aed)" }}>
-            <path d="M40 30 C35 20, 20 15, 10 20 C5 22, 2 28, 8 32 C14 36, 22 33, 28 36 C34 39, 36 46, 40 48 C44 46, 46 39, 52 36 C58 33, 66 36, 72 32 C78 28, 75 22, 70 20 C60 15, 45 20, 40 30 Z" fill="#4c1d95" />
-            {/* Wings */}
-            <path d="M28 30 C20 18, 5 10, 2 18 C-1 26, 10 32, 28 30 Z" fill="#5b21b6" opacity="0.8" />
-            <path d="M52 30 C60 18, 75 10, 78 18 C81 26, 70 32, 52 30 Z" fill="#5b21b6" opacity="0.8" />
-            {/* Eye */}
-            <circle cx="34" cy="27" r="2" fill="#a855f7" />
-            <circle cx="46" cy="27" r="2" fill="#a855f7" />
+        {/* Purple dragon silhouette – upper left */}
+        <div className="absolute" style={{ left: "2.5%", top: "46%", opacity: 0.9 }}>
+          <svg viewBox="0 0 100 75" width="100" height="75" style={{ filter: "drop-shadow(0 0 10px #7c3aed)" }}>
+            <path d="M50 38 C44 25, 25 18, 12 24 C6 27, 2 34, 10 40 C18 46, 28 41, 36 45 C44 49, 46 58, 50 61 C54 58, 56 49, 64 45 C72 41, 82 46, 90 40 C98 34, 94 27, 88 24 C75 18, 56 25, 50 38 Z" fill="#3d1880" />
+            <path d="M36 38 C26 22, 6 12, 2 22 C-2 32, 12 42, 36 38 Z" fill="#4c1d96" opacity="0.85" />
+            <path d="M64 38 C74 22, 94 12, 98 22 C102 32, 88 42, 64 38 Z" fill="#4c1d96" opacity="0.85" />
+            <circle cx="42" cy="33" r="2.5" fill="#a855f7" />
+            <circle cx="58" cy="33" r="2.5" fill="#a855f7" />
           </svg>
         </div>
 
-        {/* Ground fog */}
+        {/* Ground mist */}
         <div className="absolute bottom-0 left-0 right-0" style={{
-          height: "160px",
-          background: "linear-gradient(to top, rgba(30,8,80,0.8) 0%, rgba(60,20,120,0.3) 50%, transparent 100%)",
+          height: "180px",
+          background: "linear-gradient(to top, rgba(24,6,70,0.85) 0%, rgba(50,16,110,0.35) 50%, transparent 100%)",
         }} />
 
         {/* Sparkle particles */}
         {[
-          { x: "25%", y: "35%", color: "#a855f7", size: 4 },
-          { x: "38%", y: "15%", color: "#38bdf8", size: 3 },
-          { x: "55%", y: "28%", color: "#e879f9", size: 4 },
-          { x: "68%", y: "18%", color: "#f59e0b", size: 3 },
-          { x: "78%", y: "40%", color: "#7c3aed", size: 5 },
-          { x: "18%", y: "55%", color: "#06b6d4", size: 3 },
+          { x: "26%", y: "32%", c: "#a855f7", s: 5 },
+          { x: "40%", y: "12%", c: "#38bdf8", s: 4 },
+          { x: "54%", y: "25%", c: "#e879f9", s: 5 },
+          { x: "66%", y: "16%", c: "#f59e0b", s: 4 },
+          { x: "80%", y: "38%", c: "#7c3aed", s: 6 },
+          { x: "17%", y: "52%", c: "#06b6d4", s: 4 },
         ].map((p, i) => (
           <div key={i} className="absolute particle" style={{
             left: p.x, top: p.y,
-            width: `${p.size * 2}px`, height: `${p.size * 2}px`,
+            width: `${p.s * 2}px`, height: `${p.s * 2}px`,
             borderRadius: "50%",
-            background: p.color,
-            boxShadow: `0 0 ${p.size * 3}px ${p.size}px ${p.color}88`,
+            background: p.c,
+            boxShadow: `0 0 ${p.s * 3}px ${p.s}px ${p.c}88`,
             animationDuration: `${3 + i * 0.7}s`,
             animationDelay: `${i * 0.4}s`,
           }} />
@@ -457,30 +459,26 @@ export default async function ChildPage() {
       {/* ════════════════════════════════════════
           TOP BAR
       ════════════════════════════════════════ */}
-      <header className="relative flex items-center gap-2 px-4 pt-3 pb-2 flex-wrap" style={{ zIndex: 10 }}>
+      <header className="relative flex items-center gap-2 px-4 pt-3 pb-2 flex-wrap" style={{ zIndex: 20 }}>
         <LogoutButton />
 
         {/* Mana */}
-        <div className="flex items-center gap-1.5 shrink-0"
-          style={{
-            background: "linear-gradient(160deg, #0a2030, #050e1c)",
-            border: "1.5px solid rgba(34,211,238,0.5)",
-            borderBottom: "3px solid rgba(14,116,144,0.8)",
-            borderRadius: "14px", padding: "6px 12px",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
-          }}>
+        <div className="flex items-center gap-1.5 shrink-0" style={{
+          background: "linear-gradient(160deg, #0a2030, #050e1c)",
+          border: "1.5px solid rgba(34,211,238,0.55)",
+          borderBottom: "3px solid rgba(14,116,144,0.8)",
+          borderRadius: "14px", padding: "5px 11px",
+          boxShadow: "0 4px 14px rgba(0,0,0,0.55)",
+        }}>
           <span className="text-violet-300 text-xs font-black">מנה</span>
           <div className="flex gap-1 mx-1">
             {Array.from({ length: energyMax }).map((_, i) => (
-              <div key={i} className={`w-3.5 h-3.5 rotate-45 border ${
-                i < profile.energy
-                  ? "border-cyan-300"
-                  : "border-white/20"
-              }`} style={{
+              <div key={i} className="w-3.5 h-3.5 rotate-45 border" style={{
+                borderColor: i < profile.energy ? "#67e8f9" : "rgba(255,255,255,0.18)",
                 background: i < profile.energy
                   ? "linear-gradient(135deg, #67e8f9, #22d3ee)"
-                  : "rgba(255,255,255,0.08)",
-                boxShadow: i < profile.energy ? "0 0 6px rgba(34,211,238,0.9)" : "none",
+                  : "rgba(255,255,255,0.06)",
+                boxShadow: i < profile.energy ? "0 0 7px rgba(34,211,238,0.9)" : "none",
               }} />
             ))}
           </div>
@@ -488,58 +486,54 @@ export default async function ChildPage() {
         </div>
 
         {/* XP */}
-        <div className="flex items-center gap-1.5 shrink-0"
-          style={{
-            background: "linear-gradient(160deg, #1a0845, #0e0528)",
-            border: "1.5px solid rgba(139,92,246,0.5)",
-            borderBottom: "3px solid rgba(76,29,149,0.8)",
-            borderRadius: "14px", padding: "6px 12px",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
-          }}>
+        <div className="flex items-center gap-1.5 shrink-0" style={{
+          background: "linear-gradient(160deg, #1a0845, #0e0528)",
+          border: "1.5px solid rgba(139,92,246,0.55)",
+          borderBottom: "3px solid rgba(76,29,149,0.8)",
+          borderRadius: "14px", padding: "5px 11px",
+          boxShadow: "0 4px 14px rgba(0,0,0,0.55)",
+        }}>
           <span className="text-violet-100 font-black text-sm">XP {profile.total_xp.toLocaleString("he-IL")}</span>
-          <span className="text-yellow-400 text-sm ml-1">⭐</span>
+          <span className="text-yellow-400 text-sm mr-1">⭐</span>
         </div>
 
         {/* Stars */}
-        <div className="flex items-center gap-1.5 shrink-0"
-          style={{
-            background: "linear-gradient(160deg, #2a1800, #150c00)",
-            border: "1.5px solid rgba(202,138,4,0.5)",
-            borderBottom: "3px solid rgba(120,80,0,0.8)",
-            borderRadius: "14px", padding: "6px 12px",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
-          }}>
+        <div className="flex items-center gap-1.5 shrink-0" style={{
+          background: "linear-gradient(160deg, #2a1800, #150c00)",
+          border: "1.5px solid rgba(202,138,4,0.55)",
+          borderBottom: "3px solid rgba(120,80,0,0.8)",
+          borderRadius: "14px", padding: "5px 11px",
+          boxShadow: "0 4px 14px rgba(0,0,0,0.55)",
+        }}>
           <span className="text-yellow-100 font-black text-sm">{profile.total_stars.toLocaleString("he-IL")}</span>
-          <span className="text-yellow-400 text-sm ml-1">⭐</span>
+          <span className="text-yellow-400 text-sm mr-1">⭐</span>
         </div>
 
         {/* Coins */}
-        <div className="flex items-center gap-1.5 shrink-0"
-          style={{
-            background: "linear-gradient(160deg, #1c1000, #0e0800)",
-            border: "1.5px solid rgba(180,120,0,0.5)",
-            borderBottom: "3px solid rgba(100,60,0,0.8)",
-            borderRadius: "14px", padding: "6px 12px",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
-          }}>
+        <div className="flex items-center gap-1.5 shrink-0" style={{
+          background: "linear-gradient(160deg, #1c1000, #0e0800)",
+          border: "1.5px solid rgba(180,120,0,0.55)",
+          borderBottom: "3px solid rgba(100,60,0,0.8)",
+          borderRadius: "14px", padding: "5px 11px",
+          boxShadow: "0 4px 14px rgba(0,0,0,0.55)",
+        }}>
           <span className="text-amber-100 font-black text-sm">{profile.total_coins.toLocaleString("he-IL")}</span>
-          <span className="text-amber-400 text-sm ml-1">🪙</span>
+          <span className="text-amber-400 text-sm mr-1">🪙</span>
         </div>
 
         <div className="flex-1" />
 
-        {/* User */}
+        {/* User chip */}
         <div className="flex items-center gap-2 shrink-0">
           <div className="text-right hidden sm:block">
             <p className="text-white font-bold text-sm leading-none">{profile.display_name_he}</p>
             {gradeLabel && <p className="text-violet-300 text-xs leading-none mt-0.5">{gradeLabel}</p>}
           </div>
-          <div className="relative w-11 h-11 rounded-full flex items-center justify-center text-lg font-black text-white"
-            style={{
-              background: "linear-gradient(135deg, #7c3aed, #4c1d95)",
-              border: "2.5px solid #a78bfa",
-              boxShadow: "0 0 16px rgba(124,58,237,0.7)",
-            }}>
+          <div className="relative w-11 h-11 rounded-full flex items-center justify-center text-lg font-black text-white" style={{
+            background: "linear-gradient(135deg, #7c3aed, #4c1d95)",
+            border: "2.5px solid #a78bfa",
+            boxShadow: "0 0 18px rgba(124,58,237,0.75)",
+          }}>
             {profile.display_name_he.charAt(0)}
             <span className="absolute -top-2.5 -right-1 text-lg">👑</span>
           </div>
@@ -547,62 +541,46 @@ export default async function ChildPage() {
       </header>
 
       {/* ════════════════════════════════════════
-          MAIN CONTENT — 3 COLUMNS
+          MAIN CONTENT – 3 COLUMNS
       ════════════════════════════════════════ */}
-      <div className="relative flex flex-1 gap-3 px-3 sm:px-4 pb-2 items-start" style={{ zIndex: 10 }}>
+      <div className="relative flex flex-1 gap-4 px-3 sm:px-5 pb-2 items-stretch" style={{ zIndex: 20, minHeight: 0 }}>
 
         {/* ── LEFT PANEL: Parchment ── */}
-        <aside className="hidden md:flex flex-col shrink-0" style={{ width: "220px", paddingTop: "4px" }}>
-          <div className="rounded-3xl p-5 flex flex-col gap-3"
-            style={{
-              background: "linear-gradient(170deg, #fef3c7 0%, #fde68a 30%, #fbbf24 65%, #d97706 100%)",
-              border: "2.5px solid #b45309",
-              borderBottom: "6px solid #78350f",
-              boxShadow: "0 12px 32px rgba(0,0,0,0.7), inset 0 2px 0 rgba(255,255,255,0.6), inset 0 -2px 0 rgba(0,0,0,0.1)",
-            }}>
+        <aside className="hidden md:flex flex-col shrink-0 pt-1" style={{ width: "210px" }}>
+          <div className="rounded-3xl p-5 flex flex-col gap-3 h-full" style={{
+            background: "linear-gradient(170deg, #fef3c7 0%, #fde68a 30%, #fbbf24 65%, #d97706 100%)",
+            border: "2.5px solid #b45309",
+            borderBottom: "6px solid #78350f",
+            boxShadow: "0 14px 36px rgba(0,0,0,0.75), inset 0 2px 0 rgba(255,255,255,0.65), inset 0 -2px 0 rgba(0,0,0,0.12)",
+          }}>
 
-            {/* Icon circle */}
             <div className="flex justify-center">
-              <div className="w-14 h-14 rounded-full flex items-center justify-center text-3xl"
-                style={{
-                  background: "linear-gradient(135deg, #7c3aed, #4c1d95)",
-                  border: "2px solid #a78bfa",
-                  borderBottom: "4px solid #3b0764",
-                  boxShadow: "0 6px 20px rgba(124,58,237,0.65)",
-                }}>
-                💜
-              </div>
+              <div className="w-14 h-14 rounded-full flex items-center justify-center text-3xl" style={{
+                background: "linear-gradient(135deg, #7c3aed, #4c1d95)",
+                border: "2.5px solid #a78bfa",
+                borderBottom: "4px solid #3b0764",
+                boxShadow: "0 6px 22px rgba(124,58,237,0.7)",
+              }}>💜</div>
             </div>
 
-            {/* Title */}
             <h3 className="font-black text-center leading-snug" style={{ color: "#3a1e00", fontSize: "15px" }}>
               כל יום – עוד – ניצחון
             </h3>
-
-            {/* Body */}
             <p className="text-sm text-center leading-snug font-semibold" style={{ color: "#78350f" }}>
               ענה נכון, התקדם,<br />אסוף אלופי הקריסטלים!
             </p>
 
-            {/* Divider */}
-            <div style={{
-              height: "1.5px",
-              background: "linear-gradient(to right, transparent, rgba(180,120,20,0.8), transparent)",
-            }} />
+            <div style={{ height: "1.5px", background: "linear-gradient(to right, transparent, rgba(180,120,20,0.8), transparent)" }} />
 
-            {/* 3 icons */}
             <div className="flex justify-around">
-              {[["📚","לומדים"], ["💎","מתאמנים"], ["🏆","מצטיינים"]].map(([icon, label]) => (
+              {[["📚","לומדים"],["💎","מתאמנים"],["🏆","מצטיינים"]].map(([icon, label]) => (
                 <div key={label} className="flex flex-col items-center gap-1.5">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
-                    style={{
-                      background: "rgba(255,255,255,0.6)",
-                      border: "2px solid rgba(180,120,20,0.6)",
-                      borderBottom: "3px solid rgba(120,70,0,0.6)",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.8)",
-                    }}>
-                    {icon}
-                  </div>
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xl" style={{
+                    background: "rgba(255,255,255,0.65)",
+                    border: "2px solid rgba(180,120,20,0.65)",
+                    borderBottom: "3px solid rgba(120,70,0,0.65)",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.8)",
+                  }}>{icon}</div>
                   <span className="text-xs font-bold" style={{ color: "#3a1e00" }}>{label}</span>
                 </div>
               ))}
@@ -611,86 +589,109 @@ export default async function ChildPage() {
         </aside>
 
         {/* ── CENTER: Hero + CTA ── */}
-        <div className="flex-1 flex flex-col items-center min-w-0" style={{ gap: "8px" }}>
+        <div className="flex-1 flex flex-col items-center min-w-0" style={{ gap: "6px", paddingTop: "4px" }}>
 
-          {/* Speech bubble */}
-          <div className="w-full" style={{ maxWidth: "400px" }}>
-            <div className="speech-bubble mx-2">
-              <p className="font-black text-lg leading-snug mb-1" style={{ color: "#2e1065" }}>
+          {/* Speech bubble – above hero */}
+          <div style={{ maxWidth: "400px", width: "100%", position: "relative" }}>
+            <div style={{
+              background: "rgba(255,255,255,0.97)",
+              borderRadius: "20px",
+              padding: "14px 20px",
+              boxShadow: "0 8px 30px rgba(0,0,0,0.55), 0 2px 8px rgba(124,58,237,0.3)",
+              border: "2px solid rgba(255,255,255,0.9)",
+              position: "relative",
+            }}>
+              {/* Bubble tail */}
+              <div style={{
+                position: "absolute",
+                bottom: "-18px",
+                right: "40%",
+                width: 0, height: 0,
+                borderLeft: "14px solid transparent",
+                borderRight: "14px solid transparent",
+                borderTop: "20px solid rgba(255,255,255,0.97)",
+                filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.3))",
+              }} />
+              <p className="font-black text-lg leading-snug" style={{ color: "#2e1065" }}>
                 הגבורה שלך מוכנה לכבוש!
               </p>
-              <p className="text-sm leading-snug" style={{ color: "#4c1d95" }}>
-                {speechText.length > 80 ? speechText.slice(0, 80) + "…" : speechText}
+              <p className="text-sm leading-snug mt-1" style={{ color: "#4c1d95" }}>
+                {speechText.length > 85 ? speechText.slice(0, 85) + "…" : speechText}
               </p>
             </div>
           </div>
 
           {/* Hero stage */}
-          <div className="relative flex flex-col items-center w-full">
+          <div className="relative flex flex-col items-center w-full" style={{ flex: "1 1 auto", minHeight: "280px" }}>
 
-            {/* Large radial glow behind hero */}
+            {/* Radial hero glow */}
             <div className="absolute pointer-events-none" style={{
-              bottom: "40px", left: "50%", transform: "translateX(-50%)",
-              width: "500px", height: "320px",
-              background: "radial-gradient(ellipse, rgba(56,189,248,0.5) 0%, rgba(99,102,241,0.35) 35%, rgba(139,92,246,0.2) 55%, transparent 75%)",
-              filter: "blur(24px)",
+              bottom: "60px", left: "50%", transform: "translateX(-50%)",
+              width: "480px", height: "280px",
+              background: "radial-gradient(ellipse, rgba(56,189,248,0.55) 0%, rgba(99,102,241,0.38) 35%, rgba(139,92,246,0.18) 58%, transparent 78%)",
+              filter: "blur(22px)",
             }} />
 
-            {/* Hero crystals */}
+            {/* Floating crystal decorations around hero */}
             {[
-              { x: "8%",  y: "20%", w: 16, h: 28, color: "#a855f7", dur: "4.5s" },
-              { x: "82%", y: "10%", w: 20, h: 34, color: "#38bdf8", dur: "5.5s", delay: "0.6s" },
-              { x: "5%",  y: "60%", w: 12, h: 20, color: "#f59e0b", dur: "6s",   delay: "1.2s" },
-              { x: "85%", y: "55%", w: 18, h: 30, color: "#7c3aed", dur: "5s",   delay: "0.9s" },
-              { x: "20%", y: "5%",  w: 10, h: 18, color: "#e879f9", dur: "4s",   delay: "1.8s" },
-              { x: "72%", y: "65%", w: 14, h: 24, color: "#06b6d4", dur: "6.5s", delay: "0.3s" },
+              { x: "8%",  y: "16%", w: 14, h: 26, c: "#a855f7", dur: "4.8s" },
+              { x: "80%", y: "8%",  w: 18, h: 32, c: "#38bdf8", dur: "5.6s", del: "0.6s" },
+              { x: "4%",  y: "58%", w: 11, h: 19, c: "#f59e0b", dur: "6.1s", del: "1.2s" },
+              { x: "84%", y: "52%", w: 16, h: 28, c: "#7c3aed", dur: "5.2s", del: "0.9s" },
+              { x: "18%", y: "4%",  w: 9,  h: 16, c: "#e879f9", dur: "4.3s", del: "1.8s" },
+              { x: "70%", y: "62%", w: 13, h: 22, c: "#06b6d4", dur: "6.6s", del: "0.3s" },
             ].map((c, i) => (
               <div key={i} className="absolute particle pointer-events-none" style={{
                 left: c.x, top: c.y,
                 width: `${c.w}px`, height: `${c.h}px`,
-                background: `linear-gradient(170deg, rgba(255,255,255,0.95) 0%, ${c.color} 45%, ${c.color}aa 100%)`,
+                background: `linear-gradient(170deg, rgba(255,255,255,0.95) 0%, ${c.c} 45%, ${c.c}aa 100%)`,
                 clipPath: "polygon(50% 0%, 100% 30%, 80% 100%, 20% 100%, 0% 30%)",
-                filter: `drop-shadow(0 0 8px ${c.color}) drop-shadow(0 0 16px ${c.color}66)`,
+                filter: `drop-shadow(0 0 8px ${c.c}) drop-shadow(0 0 16px ${c.c}66)`,
                 animationDuration: c.dur,
-                animationDelay: (c as { delay?: string }).delay ?? "0s",
+                animationDelay: (c as { del?: string }).del ?? "0s",
               }} />
             ))}
 
-            {/* Hero image — large */}
-            <Link href="/child/heroes" className="relative z-10 block" style={{ marginBottom: "8px" }}>
-              <div style={{
-                transform: "scale(1.55)",
-                transformOrigin: "bottom center",
-                display: "inline-block",
-                marginBottom: "36px",
-              }}>
-                <HeroDisplay
-                  heroName={heroName}
-                  heroType={heroType}
-                  gender={heroGender}
-                  rarity={heroRarity}
-                  isActive={hasAdventure}
-                  size="xl"
-                  showName={false}
-                />
-              </div>
+            {/* ── HERO IMAGE – no card frame, transparent PNG ── */}
+            <Link href="/child/heroes" className="relative z-10 block hero-float" style={{
+              marginBottom: "0px",
+              filter: hasAdventure
+                ? "drop-shadow(0 0 20px rgba(56,189,248,0.7)) drop-shadow(0 0 40px rgba(56,189,248,0.35))"
+                : "drop-shadow(0 0 14px rgba(124,58,237,0.6)) drop-shadow(0 0 28px rgba(124,58,237,0.3))",
+            }}>
+              <Image
+                src={heroImgSrc}
+                alt={heroName}
+                width={260}
+                height={340}
+                style={{
+                  width: "220px",
+                  height: "290px",
+                  objectFit: "contain",
+                  objectPosition: "center bottom",
+                  display: "block",
+                }}
+                unoptimized
+                priority
+              />
             </Link>
 
             {/* Glowing platform disc */}
             <div className="pointer-events-none" style={{
-              width: "280px", height: "34px", marginTop: "-14px",
-              background: "radial-gradient(ellipse, rgba(56,189,248,1) 0%, rgba(99,102,241,0.85) 45%, rgba(124,58,237,0.4) 70%, transparent 100%)",
+              width: "300px", height: "36px",
+              marginTop: "-8px",
+              background: "radial-gradient(ellipse, rgba(56,189,248,1) 0%, rgba(99,102,241,0.9) 42%, rgba(124,58,237,0.45) 68%, transparent 100%)",
               borderRadius: "50%",
-              boxShadow: "0 0 70px 30px rgba(56,189,248,0.65), 0 0 140px 60px rgba(99,102,241,0.3)",
+              boxShadow: "0 0 80px 35px rgba(56,189,248,0.7), 0 0 160px 70px rgba(99,102,241,0.35)",
             }} />
 
-            {/* Hero name + progress */}
-            <p className="font-black text-xl text-white mt-5 drop-shadow-lg">{heroName}</p>
+            {/* Hero name */}
+            <p className="font-black text-xl text-white mt-4 drop-shadow-lg">{heroName}</p>
             <p className="text-violet-300 text-sm font-semibold mt-0.5">התקדמות שלך</p>
             <div className="flex gap-2 mt-1.5">
               {[0,1,2].map(i => (
                 <div key={i} className="w-3 h-3 rounded-full" style={{
-                  background: i === 0 ? "#38bdf8" : "rgba(56,189,248,0.18)",
+                  background: i === 0 ? "#38bdf8" : "rgba(56,189,248,0.15)",
                   boxShadow: i === 0 ? "0 0 10px 3px rgba(56,189,248,0.7)" : "none",
                 }} />
               ))}
@@ -698,54 +699,78 @@ export default async function ChildPage() {
           </div>
 
           {/* ── CTA BUTTON ── */}
-          <div className="w-full px-2 mt-4" style={{ maxWidth: "520px" }}>
-            <ArenaButton
-              href={`/child/arena?adventure=${activeAdventure?.id ?? adventureType}`}
-              disabled={!hasAdventure}
-              label={CHILD_ARENA_BUTTON}
-            />
+          <div className="w-full px-2 mt-3" style={{ maxWidth: "540px" }}>
+            {hasAdventure ? (
+              <Link
+                href={`/child/arena?adventure=${activeAdventure.id}`}
+                className="block w-full text-center font-black text-2xl py-5 transition-all hover:brightness-110 active:scale-95"
+                style={{
+                  background: "linear-gradient(180deg, #fde68a 0%, #f59e0b 28%, #d97706 65%, #b45309 100%)",
+                  borderRadius: "18px",
+                  border: "3px solid #fbbf24",
+                  borderBottom: "7px solid #78350f",
+                  boxShadow: "0 0 40px rgba(245,158,11,0.65), 0 8px 24px rgba(0,0,0,0.5), inset 0 2px 0 rgba(255,255,255,0.4)",
+                  color: "#1c0a00",
+                  textShadow: "0 1px 3px rgba(0,0,0,0.3)",
+                  letterSpacing: "0.02em",
+                }}>
+                ⚔️ {CHILD_ARENA_BUTTON}
+              </Link>
+            ) : (
+              <button
+                disabled
+                className="block w-full text-center font-black text-2xl py-5"
+                style={{
+                  background: "linear-gradient(180deg, #4a3000 0%, #2a1a00 100%)",
+                  borderRadius: "18px",
+                  border: "3px solid #5a3800",
+                  borderBottom: "7px solid #1a0e00",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+                  color: "#7a5a20",
+                  cursor: "not-allowed",
+                  letterSpacing: "0.02em",
+                }}>
+                ⚔️ {CHILD_ARENA_BUTTON}
+              </button>
+            )}
             {arenaThreat && (
-              <p className="text-amber-400/80 text-sm text-center mt-2 font-semibold">⚔️ {arenaThreat}</p>
+              <p className="text-amber-400/85 text-sm text-center mt-2 font-semibold">⚔️ {arenaThreat}</p>
             )}
             {!hasAdventure && (
-              <p className="text-slate-400 text-sm text-center mt-2">{CHILD_HERO_RESTING_TEXT}</p>
+              <p className="text-slate-400 text-sm text-center mt-2">✕ {CHILD_HERO_RESTING_TEXT}</p>
             )}
           </div>
         </div>
 
-        {/* ── RIGHT PANEL: Leaderboard ── */}
-        <aside className="hidden md:flex flex-col shrink-0" style={{ width: "220px", paddingTop: "4px" }}>
-          <div className="rounded-3xl p-5 flex flex-col gap-4"
-            style={{
-              background: "linear-gradient(170deg, #0a1e38, #050e1c)",
-              border: "2.5px solid #c49a3a",
-              borderBottom: "6px solid #7a5800",
-              boxShadow: "0 12px 32px rgba(0,0,0,0.75), inset 0 1px 0 rgba(196,154,58,0.3)",
-            }}>
+        {/* ── RIGHT PANEL: Trophy / Progress ── */}
+        <aside className="hidden md:flex flex-col shrink-0 pt-1" style={{ width: "210px" }}>
+          <div className="rounded-3xl p-5 flex flex-col gap-4 h-full" style={{
+            background: "linear-gradient(170deg, #0c2240, #060e20)",
+            border: "2.5px solid #c49a3a",
+            borderBottom: "6px solid #7a5800",
+            boxShadow: "0 14px 36px rgba(0,0,0,0.8), inset 0 1px 0 rgba(196,154,58,0.3)",
+          }}>
 
-            {/* Trophy icon */}
             <div className="flex justify-center">
-              <div className="w-14 h-14 rounded-full flex items-center justify-center text-3xl"
-                style={{
-                  background: "linear-gradient(135deg, #f59e0b, #d97706)",
-                  border: "2px solid #fbbf24",
-                  borderBottom: "4px solid #92400e",
-                  boxShadow: "0 6px 20px rgba(245,158,11,0.65)",
-                }}>
-                🏆
-              </div>
+              <div className="w-14 h-14 rounded-full flex items-center justify-center text-3xl" style={{
+                background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                border: "2.5px solid #fbbf24",
+                borderBottom: "4px solid #92400e",
+                boxShadow: "0 6px 22px rgba(245,158,11,0.7)",
+              }}>🏆</div>
             </div>
 
             <h3 className="font-black text-center" style={{ color: "#fbbf24", fontSize: "15px" }}>
               אלופת הקריסטלים
             </h3>
-            <p className="text-slate-400 text-sm text-center" style={{ marginTop: "-8px" }}>התקדמות כוללת</p>
+            <p className="text-slate-400 text-sm text-center" style={{ marginTop: "-10px" }}>
+              התקדמות כוללת
+            </p>
 
-            {/* Progress bar */}
             <div>
               <div style={{
-                height: "16px",
-                background: "rgba(0,0,0,0.5)",
+                height: "18px",
+                background: "rgba(0,0,0,0.55)",
                 borderRadius: "999px",
                 border: "1px solid rgba(255,255,255,0.08)",
                 overflow: "hidden",
@@ -755,7 +780,7 @@ export default async function ChildPage() {
                   width: `${overallProgress}%`,
                   background: "linear-gradient(to left, #4ade80, #16a34a)",
                   borderRadius: "999px",
-                  boxShadow: "0 0 12px rgba(74,222,128,0.7)",
+                  boxShadow: "0 0 14px rgba(74,222,128,0.75)",
                   transition: "width 0.6s ease",
                 }} />
               </div>
@@ -764,15 +789,14 @@ export default async function ChildPage() {
               </p>
             </div>
 
-            {/* CTA button */}
             <Link href="/child/heroes"
-              className="text-sm py-3 px-4 text-center block font-black transition-all hover:brightness-110 active:scale-95"
+              className="text-sm py-3 px-4 text-center block font-black transition-all hover:brightness-110 active:scale-95 mt-auto"
               style={{
                 background: "linear-gradient(180deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%)",
                 borderRadius: "14px",
                 border: "2px solid #fbbf24",
                 borderBottom: "5px solid #92400e",
-                boxShadow: "0 6px 18px rgba(245,158,11,0.5)",
+                boxShadow: "0 6px 18px rgba(245,158,11,0.55)",
                 color: "#1c1917",
               }}>
               👑 הגש הישגים
@@ -782,79 +806,71 @@ export default async function ChildPage() {
       </div>
 
       {/* ════════════════════════════════════════
-          WORLD CARDS
+          WORLD CARDS SECTION
       ════════════════════════════════════════ */}
-      <div className="relative px-3 sm:px-4 pb-4" style={{ zIndex: 10 }}>
+      <div className="relative px-3 sm:px-5 pb-4 mt-1" style={{ zIndex: 20 }}>
 
-        {/* Divider */}
+        {/* Section divider */}
         <div className="flex items-center gap-3 mb-4">
-          <div style={{ flex: 1, height: "1.5px", background: "linear-gradient(to left, transparent, rgba(196,154,58,0.85), transparent)" }} />
-          <p className="font-black text-sm whitespace-nowrap px-4 py-1.5 rounded-full"
-            style={{
-              color: "#fbbf24",
-              background: "rgba(160,110,20,0.2)",
-              border: "1px solid rgba(196,154,58,0.45)",
-              boxShadow: "0 0 14px rgba(196,154,58,0.2)",
-            }}>
-            ← הדרך שלך להצלחה →
-          </p>
-          <div style={{ flex: 1, height: "1.5px", background: "linear-gradient(to right, transparent, rgba(196,154,58,0.85), transparent)" }} />
+          <div style={{ flex: 1, height: "1.5px", background: "linear-gradient(to left, transparent, rgba(196,154,58,0.9), transparent)" }} />
+          <p className="font-black text-sm whitespace-nowrap px-4 py-1.5 rounded-full" style={{
+            color: "#fbbf24",
+            background: "rgba(160,110,20,0.22)",
+            border: "1px solid rgba(196,154,58,0.5)",
+            boxShadow: "0 0 16px rgba(196,154,58,0.22)",
+          }}>← הדרך שלך להצלחה →</p>
+          <div style={{ flex: 1, height: "1.5px", background: "linear-gradient(to right, transparent, rgba(196,154,58,0.9), transparent)" }} />
         </div>
 
         {worlds.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {worlds.slice(0, 4).map((w, idx) => {
-              const cs      = WORLD_CARD_STYLES[idx] ?? WORLD_CARD_STYLES[0];
-              const locked  = !w.is_unlocked;
-              const done    = Math.round(w.progress_percent * 20 / 100);
+              const cs     = WORLD_CARD_STYLES[idx] ?? WORLD_CARD_STYLES[0];
+              const locked = !w.is_unlocked;
+              const done   = Math.round(w.progress_percent * 20 / 100);
               return (
                 <div key={w.world_id}
-                  className={`relative rounded-3xl flex flex-col gap-3 ${locked ? "opacity-50" : "hover:scale-[1.02] cursor-pointer"}`}
+                  className={`relative rounded-3xl flex flex-col gap-3 transition-all ${locked ? "opacity-50" : "hover:scale-[1.025] cursor-pointer"}`}
                   style={{
-                    padding: "16px",
-                    background: `linear-gradient(160deg, ${cs.gradFrom} 0%, ${cs.gradTo} 100%)`,
-                    border: `2px solid ${cs.border}`,
-                    borderBottom: `5px solid ${cs.bdrShadow}`,
+                    padding: "18px",
+                    background: `linear-gradient(155deg, ${cs.gradFrom} 0%, ${cs.gradTo} 100%)`,
+                    border: `2.5px solid ${cs.border}`,
+                    borderBottom: `5px solid ${cs.shadow}`,
                     boxShadow: locked
-                      ? "0 4px 14px rgba(0,0,0,0.55)"
-                      : `0 10px 28px ${cs.glowColor}, 0 4px 0 ${cs.bdrShadow}`,
-                    minHeight: "180px",
-                    transition: "transform 0.15s ease, box-shadow 0.15s ease",
+                      ? "0 4px 16px rgba(0,0,0,0.6)"
+                      : `0 12px 30px ${cs.glow}, 0 4px 0 ${cs.shadow}`,
+                    minHeight: "185px",
                   }}>
 
-                  {/* Card header row */}
                   <div className="flex items-start justify-between">
-                    <span className="text-6xl leading-none" style={{
-                      filter: locked ? "grayscale(1)" : `drop-shadow(0 3px 10px rgba(0,0,0,0.6))`,
+                    <span className="text-5xl leading-none" style={{
+                      filter: locked ? "grayscale(1)" : `drop-shadow(0 3px 10px rgba(0,0,0,0.65))`,
                     }}>
-                      {locked ? "🔒" : cs.cardIcon}
+                      {locked ? "🔒" : cs.icon}
                     </span>
-                    <span style={{ color: "#facc15", fontSize: "20px" }}>⭐</span>
+                    <span style={{ color: "#facc15", fontSize: "18px" }}>⭐</span>
                   </div>
 
-                  {/* Title */}
                   <p className="font-black text-base leading-tight" style={{
-                    color: locked ? "#64748b" : "#fff",
+                    color: locked ? "#4a5568" : "#fff",
                     textShadow: locked ? "none" : "0 1px 8px rgba(0,0,0,0.8)",
                   }}>
-                    {w.name_he}
+                    {w.name_he || cs.label}
                   </p>
 
-                  {/* Description */}
-                  {!locked && w.description_he && (
-                    <p style={{ color: "rgba(226,232,240,0.8)", fontSize: "12px", lineHeight: 1.4 }}>
-                      {w.description_he}
+                  {!locked && (w.description_he || cs.desc) && (
+                    <p style={{ color: "rgba(226,232,240,0.85)", fontSize: "12px", lineHeight: 1.4 }}>
+                      {w.description_he || cs.desc}
                     </p>
                   )}
 
-                  {/* Progress */}
                   {!locked && !w.is_completed && (
                     <div className="mt-auto flex flex-col gap-1.5">
                       <div style={{
                         height: "10px",
                         background: "rgba(0,0,0,0.45)",
                         borderRadius: "999px",
-                        border: "1px solid rgba(255,255,255,0.1)",
+                        border: "1px solid rgba(255,255,255,0.08)",
                         overflow: "hidden",
                       }}>
                         <div style={{
@@ -862,7 +878,7 @@ export default async function ChildPage() {
                           width: `${w.progress_percent}%`,
                           background: "linear-gradient(to left, #4ade80, #16a34a)",
                           borderRadius: "999px",
-                          boxShadow: "0 0 8px rgba(74,222,128,0.6)",
+                          boxShadow: "0 0 8px rgba(74,222,128,0.65)",
                         }} />
                       </div>
                       <p style={{ color: "#e2e8f0", fontSize: "13px", fontWeight: 700 }}>
@@ -871,7 +887,7 @@ export default async function ChildPage() {
                     </div>
                   )}
                   {locked && (
-                    <p className="mt-auto" style={{ color: "#64748b", fontSize: "13px" }}>
+                    <p className="mt-auto" style={{ color: "#4a5568", fontSize: "13px" }}>
                       ⭐ {w.required_stars} לפתיחה
                     </p>
                   )}
@@ -890,37 +906,35 @@ export default async function ChildPage() {
       </div>
 
       {/* ════════════════════════════════════════
-          FOOTER
+          FOOTER NAV
       ════════════════════════════════════════ */}
-      <footer className="relative flex items-center justify-between px-4 pb-5 pt-1" style={{ zIndex: 10 }}>
-        {/* Dragon + motivational */}
+      <footer className="relative flex items-center justify-between px-4 pb-5 pt-1" style={{ zIndex: 20 }}>
         <div className="flex items-center gap-3">
-          <span style={{ fontSize: "48px", lineHeight: 1 }}>🐉</span>
+          <span style={{ fontSize: "44px", lineHeight: 1 }}>🐉</span>
           <p className="font-semibold hidden sm:block" style={{
-            color: "rgba(249,168,212,0.9)", fontSize: "13px",
+            color: "rgba(249,168,212,0.95)", fontSize: "13px",
             maxWidth: "220px", lineHeight: 1.4,
           }}>
             ♥ התרגול היומי עוד לך לזכור יותר ולנצח כל אתגר!
           </p>
         </div>
 
-        {/* Nav buttons */}
         <nav className="flex gap-3">
           {([
-            ["🏪", "חנות"],
-            ["📊", "דירוג"],
-            ["🏆", "הישגים"],
-            ["⚙️", "הגדרות"],
+            ["🏪","חנות"],
+            ["📊","דירוג"],
+            ["🏆","הישגים"],
+            ["⚙️","הגדרות"],
           ] as [string, string][]).map(([icon, label]) => (
             <button key={label} className="flex flex-col items-center gap-1 transition-all hover:scale-110 active:scale-95">
               <div style={{
-                width: "48px", height: "48px",
+                width: "50px", height: "50px",
                 borderRadius: "50%",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: "22px",
-                background: "linear-gradient(160deg, #1e1246, #100830)",
-                border: "2px solid rgba(124,58,237,0.45)",
-                boxShadow: "0 4px 14px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.07)",
+                background: "linear-gradient(160deg, #1e1248, #100832)",
+                border: "2px solid rgba(124,58,237,0.5)",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)",
               }}>
                 {icon}
               </div>
