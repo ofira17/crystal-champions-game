@@ -48,6 +48,23 @@ C:\Users\97253\Desktop\קלוד\crystal-champions\.claude\settings.local.json
 
 **Never set:** `bypassPermissions` or `dangerously-skip-permissions`.
 
+## Mission Flow Rule (CANONICAL — DO NOT violate)
+
+The child does not freely choose learning subjects. Parents/teachers prepare missions; the child chooses from prepared missions via `/child/missions`. The home screen bottom button must always link to `/child/missions`, never to `/child/select-subject`.
+
+## Home Screen Card Rule (CANONICAL — DO NOT violate)
+
+No visible home card may remain inactive (without a working link) unless explicitly approved in writing.
+
+If a card is visible on `/child`, it MUST:
+- Link to an existing route, OR
+- Link to a placeholder route (created before wiring), OR
+- Be intentionally removed from the screen
+
+A card left as an inactive `<div>` with a "בקרוב" title is NOT acceptable unless the user has explicitly approved skipping it.
+
+Before wiring any card, verify the target route file exists. Never wire a link to a non-existent route.
+
 ## Game Intro Overlay (CANONICAL — DO NOT revert)
 
 A full-screen intro overlay is shown **once per login/session** when the child first enters the arena (`phase === "battle"`). It uses `sessionStorage` key `crystal_intro_shown` to track whether the intro was already shown — never shows again within the same browser session.
@@ -475,6 +492,14 @@ Questions that fail this hard block are replaced by fallback questions from `lib
 3. Vercel auto-deploys; confirm with `npx vercel ls` — latest entry should be `● Ready` and aliased to `crystal-champions-game.vercel.app`
 4. If auto-deploy did not trigger, run `npx vercel --prod` from local source (never redeploy an old production slug)
 5. Verify live build: fetch the production URL and confirm new chunk hashes in the HTML
+
+## Grade 1 Fallback Question Bank — Niqqud (2026-06-11)
+
+- `GRADE_1_BANK` in `lib/fallback-questions.ts` now uses **Hebrew niqqud** on all child-facing text fields (`text_he`, `option_*_he`).
+- Numeric option values, `correct_answer`, `difficulty`, `subject_he`, and all other fields are **unchanged**.
+- The candidate file `lib/fallback-questions_with_niqqud.ts` remains for reference; do not delete it without explicit approval.
+- **Do NOT update `game_sessions.auto_questions`** to add niqqud. That column is a historical session snapshot — it must not be retroactively modified.
+- The Supabase apply script (`scripts/update-grade1-niqqud-dry-run.ts`) is **optional cosmetic cleanup only** and must not be run without explicit written approval.
 
 **Never push only to origin and expect production to update.**
 

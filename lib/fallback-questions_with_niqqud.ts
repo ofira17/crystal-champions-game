@@ -1,6 +1,9 @@
-// Pre-built safe fallback questions for each grade.
-// Used when OpenAI is unavailable or times out.
-// Grade 1 questions are the most critical — must be 100% safe.
+// Pre-built safe fallback questions for each grade — WITH HEBREW NIQQUD on Grade 1.
+// Grade 2–6 banks are UNCHANGED from fallback-questions.ts.
+//
+// USAGE: This file is a CANDIDATE REPLACEMENT for fallback-questions.ts.
+// Do NOT import this file in production until approved and validated.
+// Compare with fallback-questions.ts using scripts/update-grade1-niqqud-dry-run.ts.
 
 import "server-only";
 import { randomUUID } from "node:crypto";
@@ -23,6 +26,10 @@ function q(
   };
 }
 
+// ─── GRADE 1 — WITH NIQQUD ────────────────────────────────────────────────────
+// Only child-facing Hebrew text fields have niqqud:
+//   text_he, option_*_he (Hebrew words only — numeric options are unchanged).
+// The following are NEVER changed: correct_answer, difficulty, subject_he, IDs.
 const GRADE_1_BANK: Omit<AutoQuestion, "id">[] = [
   q("כַּמָּה זֶה 2 וְעוֹד 3?", "4", "5", "6", "7", "B", "חשבון"),
   q("כַּמָּה זֶה 4 וְעוֹד 4?", "6", "7", "8", "9", "C", "חשבון"),
@@ -126,6 +133,7 @@ const GRADE_1_BANK: Omit<AutoQuestion, "id">[] = [
   q("מָה עוֹשִׂים עִם הָאָזְנַיִם?", "שׁוֹמְעִים", "רוֹאִים", "טוֹעֲמִים", "כּוֹתְבִים", "A", "מדעים"),
 ];
 
+// ─── GRADE 2–6 — UNCHANGED ────────────────────────────────────────────────────
 const GRADE_2_BANK: Omit<AutoQuestion, "id">[] = [
   q("כמה זה 25 ועוד 13?", "37", "38", "39", "40", "B", "חשבון", "Easy"),
   q("כמה זה 60 פחות 25?", "35", "30", "25", "45", "A", "חשבון", "Easy"),
@@ -209,9 +217,7 @@ const BANKS: Record<number, Omit<AutoQuestion, "id">[]> = {
  */
 export function getFallbackQuestions(grade: number, count: number): AutoQuestion[] {
   const bank = BANKS[grade] ?? BANKS[1];
-  // Shuffle
   const shuffled = [...bank].sort(() => Math.random() - 0.5);
-  // If count > bank size, repeat with different shuffle
   const result: AutoQuestion[] = [];
   let i = 0;
   while (result.length < count) {

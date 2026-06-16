@@ -125,7 +125,7 @@ function AnswerButton({
   return (
     <button onClick={onClick} disabled={disabled} className={`answer-btn ${cls} w-full`}>
       <span className="text-lg shrink-0 opacity-80">{ANSWER_ICONS[answerKey]}</span>
-      <span className="text-sm font-bold leading-tight text-right flex-1">{text}</span>
+      <span style={{ fontSize: "clamp(14px, 1vw, 18px)", fontWeight: 800, lineHeight: 1.3, textAlign: "right", flex: 1 }}>{text}</span>
     </button>
   );
 }
@@ -1715,6 +1715,30 @@ function ArenaPageContent() {
     }, 600);
   }
 
+  // ── Auto-open question when enemy becomes visible (bypasses isPending gate) ──
+  // On the first question, isPending from the init startTransition is still true
+  // when the staging timer fires, silently blocking handleFireCrystal(). This effect
+  // watches enemyVisible directly and opens the challenge without the isPending check.
+  useEffect(() => {
+    if (phase !== "battle" || !enemyVisible || !questions[current] || !arenaData) return;
+    const t = setTimeout(() => {
+      if (arenaRef.current) {
+        const _baw = arenaRef.current.offsetWidth;
+        const _bah = arenaRef.current.offsetHeight;
+        const _bFacingRight = enemyStateRef.current.x >= heroPosRef.current.x;
+        setBeamSnapshot({
+          hx: (heroPosRef.current.x / 100) * _baw + (_bFacingRight ? 40 : -40),
+          hy: (heroPosRef.current.y / 100) * _bah + 55,
+          ex: (enemyStateRef.current.x / 100) * _baw,
+          ey: (enemyStateRef.current.y / 100) * _bah,
+        });
+      }
+      setPhase(prev => prev === "battle" ? "challenge" : prev);
+    }, 700);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enemyVisible, phase, current, questions, arenaData]);
+
   // ── Answer submitted ───────────────────────────────────────────────────────
   function handleAnswer(key: AnswerKey) {
     if (phase !== "challenge" || isPending) return;
@@ -3088,7 +3112,7 @@ function ArenaPageContent() {
               border: "1px solid rgba(255,255,255,0.09)", padding: "6px 10px",
             }}>
               <span style={{ fontSize: 16 }}>💎</span>
-              <p style={{ color: "white", fontSize: 14, fontWeight: 700, lineHeight: 1.35, margin: 0, flex: 1, textAlign: "center" }}>
+              <p style={{ color: "white", fontSize: "clamp(16px, 1.15vw, 22px)", fontWeight: 900, lineHeight: 1.35, margin: 0, flex: 1, textAlign: "center" }}>
                 {q.text_he}
               </p>
               <span style={{ fontSize: 16 }}>💎</span>

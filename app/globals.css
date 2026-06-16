@@ -453,7 +453,7 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  min-height: 44px;
+  min-height: 60px;
 }
 .answer-btn:active:not(:disabled) {
   transform: translateY(3px);
