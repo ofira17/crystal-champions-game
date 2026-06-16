@@ -385,6 +385,10 @@ vercel redeploy <latest-production-deployment-url> --target production
 ```
 Then verify production chunks changed: fetch https://crystal-champions-game.vercel.app and confirm `/_next/static/chunks/` URLs changed from the previous build. If chunks are identical, the new build is not live — redeploy again.
 
+## Visual QA — Authenticated Pages Screenshot Rule
+
+For visual changes on authenticated pages, if `/child` screenshot is blocked by auth, create a temporary local-only preview (e.g., a composite PNG using PIL, or a static HTML in `public/`), capture the real page layout, then delete the temporary code. Do not ask the user to verify manually.
+
 ## QA Rules
 
 - Visual issues must be verified in the **real production arena** at https://crystal-champions-game.vercel.app/child/arena, not only by reading code.

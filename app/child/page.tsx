@@ -149,31 +149,28 @@ export default async function ChildHomePage() {
           transform: translateX(-50%);
           z-index: 25;
         }
-        .arena-cta-btn {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: clamp(360px, 32vw, 560px);
-          height: clamp(58px, 7vh, 78px);
-          background: linear-gradient(135deg, #f59e0b 0%, #d97706 40%, #ea580c 100%);
-          border: 2px solid #facc15;
-          border-radius: 22px;
-          box-shadow: 0 0 28px rgba(250, 204, 21, 0.6), 0 0 10px rgba(234, 88, 12, 0.45), inset 0 1px 0 rgba(255,255,255,0.2);
-          font-size: clamp(22px, 2.2vw, 38px);
-          font-weight: 900;
-          color: #fff;
-          text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        .arena-img-btn {
+          display: block;
+          background: none;
+          border: none;
+          padding: 0;
+          margin: 0;
           text-decoration: none;
           cursor: pointer;
-          transition: transform 0.15s, box-shadow 0.15s;
-          direction: rtl;
-          white-space: nowrap;
+          transition: transform 0.15s, filter 0.15s;
+          line-height: 0;
         }
-        .arena-cta-btn:hover {
-          transform: scale(1.04);
-          box-shadow: 0 0 40px rgba(250, 204, 21, 0.85), 0 0 16px rgba(234, 88, 12, 0.6), inset 0 1px 0 rgba(255,255,255,0.2);
+        .arena-img-btn img {
+          width: clamp(320px, 30vw, 520px);
+          height: auto;
+          display: block;
+          background: none;
         }
-        .arena-cta-btn.disabled {
+        .arena-img-btn:hover {
+          transform: scale(1.05);
+          filter: brightness(1.1) drop-shadow(0 0 18px rgba(250,204,21,0.7));
+        }
+        .arena-img-btn.disabled {
           opacity: 0.45;
           cursor: not-allowed;
           pointer-events: none;
@@ -578,12 +575,27 @@ export default async function ChildHomePage() {
         {/* -- ARENA CTA - centered, below hero, above dashboard -- */}
         <div className="arena-cta-zone">
           {arenaHref ? (
-            <Link href={arenaHref} className="arena-cta-btn" aria-label="כניסה לזירה">
-              כניסה לזירה!
+            <Link href={arenaHref} className="arena-img-btn" aria-label="כניסה לזירה">
+              <Image
+                src="/btn-arena-clean.png"
+                alt="כניסה לזירה"
+                width={520}
+                height={140}
+                style={{ width: "clamp(320px, 30vw, 520px)", height: "auto", display: "block" }}
+                priority
+                unoptimized
+              />
             </Link>
           ) : (
-            <div className="arena-cta-btn disabled" aria-label="כניסה לזירה">
-              כניסה לזירה!
+            <div className="arena-img-btn disabled" aria-label="כניסה לזירה">
+              <Image
+                src="/btn-arena-clean.png"
+                alt="כניסה לזירה"
+                width={520}
+                height={140}
+                style={{ width: "clamp(320px, 30vw, 520px)", height: "auto", display: "block" }}
+                unoptimized
+              />
             </div>
           )}
         </div>
