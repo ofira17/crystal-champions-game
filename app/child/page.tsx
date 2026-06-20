@@ -239,6 +239,21 @@ export default async function ChildHomePage() {
           font-size: clamp(10px, 1.1vw, 14px);
         }
 
+        /* -- Shared top-row image card slot -- */
+        .top-img-card {
+          padding: 0;
+          overflow: hidden;
+          background: transparent;
+          border: none;
+        }
+        .top-img-card-img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          object-position: center;
+          display: block;
+        }
+
         /* -- Missions mini button under logo -- */
         .missions-mini-btn {
           display: inline-flex;
@@ -350,8 +365,15 @@ export default async function ChildHomePage() {
             priority
             unoptimized
           />
-          <Link href="/child/missions" className="missions-mini-btn" aria-label="משימות שלי">
-            📋 משימות שלי
+          <Link href="/child/missions" aria-label="משימות שלי" style={{ display: "block", lineHeight: 0 }}>
+            <Image
+              src="/my-missions-button-v2.png"
+              alt="משימות שלי"
+              width={220}
+              height={56}
+              style={{ width: "clamp(150px, 12vw, 220px)", height: "auto", display: "block" }}
+              unoptimized
+            />
           </Link>
         </div>
 
@@ -605,14 +627,14 @@ export default async function ChildHomePage() {
 
           {/* Row 1 - 3 large placeholder cards */}
           <div className="dashboard-row-main">
-            <Link href="/child/lucky-friend" className="ph-card ph-card-main" aria-label="חבר מזל">
-              🤝 חבר מזל
+            <Link href="/child/lucky-friend" className="ph-card ph-card-main top-img-card" aria-label="חבר מזל">
+              <img src="/lucky-friend-card-clean.png" alt="חבר מזל" className="top-img-card-img" />
             </Link>
-            <Link href="/child/shop" className="ph-card ph-card-main" aria-label="חנות הקריסטלים">
-              💎 חנות הקריסטלים
+            <Link href="/child/shop" className="ph-card ph-card-main top-img-card" aria-label="חנות הקריסטלים">
+              <img src="/crystal-shop-card-clean.png" alt="חנות הקריסטלים" className="top-img-card-img" />
             </Link>
-            <Link href="/child/leaderboard" className="ph-card ph-card-main" aria-label="דירוגים">
-              🏆 דירוגים
+            <Link href="/child/leaderboard" className="ph-card ph-card-main top-img-card" aria-label="דירוגים">
+              <img src="/rankings-card-clean.png" alt="דירוגים" className="top-img-card-img" />
             </Link>
           </div>
 
