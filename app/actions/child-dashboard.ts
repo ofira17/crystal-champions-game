@@ -56,6 +56,7 @@ export interface ChildDashboardData {
   activeAdventure: ActiveAdventure | null;
   worlds:          WorldWithProgress[];
   energyMax:       number;
+  dailyWins:       number;
 }
 
 // ─── Main dashboard loader ────────────────────────────────
@@ -64,7 +65,7 @@ export async function getChildDashboardData(): Promise<ChildDashboardData> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) return { profile: null, hero: null, activeAdventure: null, worlds: [], energyMax: ENERGY_MAX };
+  if (!user) return { profile: null, hero: null, activeAdventure: null, worlds: [], energyMax: ENERGY_MAX, dailyWins: 0 };
 
   // ── 1. Child profile ──────────────────────────────────
   const { data: profile } = await supabase
@@ -73,7 +74,7 @@ export async function getChildDashboardData(): Promise<ChildDashboardData> {
     .eq("user_id", user.id)
     .single();
 
-  if (!profile) return { profile: null, hero: null, activeAdventure: null, worlds: [], energyMax: ENERGY_MAX };
+  if (!profile) return { profile: null, hero: null, activeAdventure: null, worlds: [], energyMax: ENERGY_MAX, dailyWins: 0 };
 
   const admin = createAdminClient();
 
@@ -184,11 +185,33 @@ export async function getChildDashboardData(): Promise<ChildDashboardData> {
     };
   });
 
+  // ── 5. Daily wins (boss_defeated today) ──────────────
+  // Compute start-of-today in Asia/Jerusalem, then express it as a UTC instant.
+  const _now = new Date();
+  const israelDateStr = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jerusalem",
+  }).format(_now); // "YYYY-MM-DD" in Israel local time
+  const _utcRef = new Date(_now.toLocaleString("en-US", { timeZone: "UTC" }));
+  const _ilRef  = new Date(_now.toLocaleString("en-US", { timeZone: "Asia/Jerusalem" }));
+  const _offsetMs = _ilRef.getTime() - _utcRef.getTime(); // Israel ahead of UTC
+  // Midnight Israel = midnight-of-that-date-in-UTC shifted back by the offset
+  const todayStart = new Date(
+    new Date(israelDateStr + "T00:00:00Z").getTime() - _offsetMs
+  );
+
+  const { count: dailyWinsCount } = await supabase
+    .from("game_sessions")
+    .select("id", { count: "exact", head: true })
+    .eq("child_id", profile.id)
+    .eq("boss_defeated", true)
+    .gte("started_at", todayStart.toISOString());
+
   return {
     profile:         profile as ChildProfile,
     hero,
     activeAdventure,
     worlds,
     energyMax:       ENERGY_MAX,
+    dailyWins:       dailyWinsCount ?? 0,
   };
 }

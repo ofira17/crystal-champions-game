@@ -2,6 +2,7 @@ import { requireRole } from "@/lib/auth/helpers";
 import { getChildDashboardData } from "@/app/actions/child-dashboard";
 import Image from "next/image";
 import Link from "next/link";
+import ProgressCard from "@/components/child/ProgressCard";
 
 // Server-safe hero avatar resolver (mirrors HeroDisplay logic without "use client")
 const GILAD_IMAGES = Array.from(
@@ -41,7 +42,7 @@ function resolveHeroAvatar(gender?: "M" | "F" | null, colorTheme?: string | null
 export default async function ChildHomePage() {
   await requireRole("child");
 
-  const { profile, hero, activeAdventure, energyMax } = await getChildDashboardData();
+  const { profile, hero, activeAdventure, energyMax, dailyWins, worlds } = await getChildDashboardData();
 
   const arenaHref = activeAdventure
     ? `/child/arena?adventure=${activeAdventure.id}`
@@ -186,23 +187,27 @@ export default async function ChildHomePage() {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 10px;
+          gap: clamp(10px, 1.8vh, 20px);
         }
 
         .dashboard-row-main {
           width: 100%;
           display: grid;
           grid-template-columns: repeat(3, 1fr);
-          gap: clamp(10px, 1.4vw, 18px);
+          grid-template-rows: clamp(96px, 13.5vh, 135px);
+          gap: clamp(8px, 1.2vw, 16px);
           direction: ltr;
+          align-items: stretch;
         }
 
         .dashboard-row-worlds {
           width: 100%;
           display: grid;
-          grid-template-columns: repeat(5, 1fr);
+          grid-template-columns: repeat(5, minmax(0, 1fr));
+          grid-template-rows: clamp(74px, 9vh, 98px);
           gap: clamp(8px, 1.1vw, 14px);
           direction: ltr;
+          align-items: stretch;
         }
 
         /* Placeholder card base */
@@ -231,7 +236,8 @@ export default async function ChildHomePage() {
         }
 
         .ph-card-main {
-          height: clamp(90px, 11vh, 120px);
+          /* taller so wide-image cards become width-constrained and fill the full card */
+          height: clamp(96px, 13.5vh, 135px);
         }
 
         .ph-card-world {
@@ -241,10 +247,9 @@ export default async function ChildHomePage() {
 
         /* -- Shared top-row image card slot -- */
         .top-img-card {
-          padding: 0;
+          padding: 4px;
           overflow: hidden;
-          background: transparent;
-          border: none;
+          /* keep the ph-card glass background/border so cards have a consistent frame */
         }
         .top-img-card-img {
           width: 100%;
@@ -253,7 +258,6 @@ export default async function ChildHomePage() {
           object-position: center;
           display: block;
         }
-
         /* -- Missions mini button under logo -- */
         .missions-mini-btn {
           display: inline-flex;
@@ -310,20 +314,29 @@ export default async function ChildHomePage() {
           .dashboard-row-worlds {
             overflow-x: auto;
             overflow-y: hidden;
-            grid-template-columns: repeat(5, clamp(88px, 24vw, 120px));
+            grid-template-columns: repeat(5, clamp(80px, 19vw, 120px));
             scrollbar-width: none;
             -ms-overflow-style: none;
           }
           .dashboard-row-worlds::-webkit-scrollbar { display: none; }
           .dashboard-row-main {
             grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: clamp(68px, 9vh, 96px);
+            gap: 6px;
+          }
+          .ph-card-main {
+            height: 100%;
           }
         }
 
         @media (max-width: 480px) {
           .dashboard-row-main {
             grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
+            grid-template-rows: clamp(62px, 8vh, 84px);
+            gap: 4px;
+          }
+          .ph-card-main {
+            height: 100%;
           }
           .stat-bar-row {
             gap: 5px !important;
@@ -625,7 +638,6 @@ export default async function ChildHomePage() {
         {/* -- LOWER DASHBOARD SKELETON -- */}
         <div className="home-dashboard">
 
-          {/* Row 1 - 3 large placeholder cards */}
           <div className="dashboard-row-main">
             <Link href="/child/lucky-friend" className="ph-card ph-card-main top-img-card" aria-label="חבר מזל">
               <img src="/lucky-friend-card-clean.png" alt="חבר מזל" className="top-img-card-img" />
@@ -638,23 +650,103 @@ export default async function ChildHomePage() {
             </Link>
           </div>
 
-          {/* Row 2 - 5 smaller placeholder cards */}
+          {/* Row 2 - 5 progress cards */}
           <div className="dashboard-row-worlds">
-            <Link href="/child/daily-goals" className="ph-card ph-card-world" aria-label="יעדים יומיים">
-              🎯 יעדים יומיים
-            </Link>
-            <Link href="/child/worlds/crystal-forest" className="ph-card ph-card-world" aria-label="יער הקריסטלים">
-              🌲 יער הקריסטלים
-            </Link>
-            <Link href="/child/worlds/fire-trail" className="ph-card ph-card-world" aria-label="שביל האש">
-              🔥 שביל האש
-            </Link>
-            <Link href="/child/worlds/lightning-fortress" className="ph-card ph-card-world" aria-label="מצודת הברק">
-              ⚡ מצודת הברק
-            </Link>
-            <Link href="/child/worlds/champions-hall" className="ph-card ph-card-world" aria-label="היכל האלופים">
-              👑 היכל האלופים
-            </Link>
+
+            {/* 1. Daily Goals */}
+            <ProgressCard
+              href="/child/daily-goals"
+              imageSrc="/card-daily-goals-wide.png"
+              current={Math.min(dailyWins, 3)}
+              target={3}
+              barRect={{ left: "4%", top: "76%", width: "54%", height: "11%" }}
+              counterRect={{ left: "4%", top: "52%", width: "22%", height: "14%" }}
+              barColor="linear-gradient(90deg, #facc15, #f59e0b)"
+              barGlow="rgba(251,191,36,0.8)"
+              label="יעדים יומיים"
+            />
+
+            {/* 2. Crystal Forest */}
+            {(() => {
+              const w = worlds.find(x => x.order_index === 1);
+              const target = w?.required_stars || 10;
+              const current = Math.round((w?.progress_percent ?? 0) * target / 100);
+              // Crystal Forest barRect override: the baked track sits lower in this image
+              // than in the other cards, so we push top down to avoid the fill appearing above the track.
+              return (
+                <ProgressCard
+                  href="/child/worlds/crystal-forest"
+                  imageSrc="/card-crystal-forest-wide.png"
+                  current={current}
+                  target={target}
+                  barRect={{ left: "4%", top: "82%", width: "54%", height: "9%" }}
+                  counterRect={{ left: "4%", top: "54%", width: "22%", height: "14%" }}
+                  barColor="linear-gradient(90deg, #34d399, #059669)"
+                  barGlow="rgba(52,211,153,0.8)"
+                  label="יער הקריסטלים"
+                />
+              );
+            })()}
+
+            {/* 3. Fire Path */}
+            {(() => {
+              const w = worlds.find(x => x.order_index === 2);
+              const target = w?.required_stars || 10;
+              const current = Math.round((w?.progress_percent ?? 0) * target / 100);
+              return (
+                <ProgressCard
+                  href="/child/worlds/fire-trail"
+                  imageSrc="/card-fire-path-wide.png"
+                  current={current}
+                  target={target}
+                  barRect={{ left: "4%", top: "76%", width: "54%", height: "11%" }}
+                  counterRect={{ left: "4%", top: "52%", width: "22%", height: "14%" }}
+                  barColor="linear-gradient(90deg, #f97316, #dc2626)"
+                  barGlow="rgba(249,115,22,0.8)"
+                  label="שביל האש"
+                />
+              );
+            })()}
+
+            {/* 4. Lightning Fortress */}
+            {(() => {
+              const w = worlds.find(x => x.order_index === 3);
+              const target = w?.required_stars || 10;
+              const current = Math.round((w?.progress_percent ?? 0) * target / 100);
+              return (
+                <ProgressCard
+                  href="/child/worlds/lightning-fortress"
+                  imageSrc="/card-lightning-fortress-wide.png"
+                  current={current}
+                  target={target}
+                  barRect={{ left: "4%", top: "76%", width: "54%", height: "11%" }}
+                  counterRect={{ left: "4%", top: "52%", width: "22%", height: "14%" }}
+                  barColor="linear-gradient(90deg, #38bdf8, #818cf8)"
+                  barGlow="rgba(56,189,248,0.8)"
+                  label="מצודת הברק"
+                />
+              );
+            })()}
+
+            {/* 5. Champions Hall */}
+            {(() => {
+              const w = worlds.find(x => x.order_index === 4);
+              const target = w?.required_stars || 10;
+              const current = Math.round((w?.progress_percent ?? 0) * target / 100);
+              return (
+                <ProgressCard
+                  href="/child/worlds/champions-hall"
+                  imageSrc="/card-champions-hall-wide.png"
+                  current={current}
+                  target={target}
+                  barRect={{ left: "4%", top: "76%", width: "54%", height: "11%" }}
+                  counterRect={{ left: "4%", top: "52%", width: "22%", height: "14%" }}
+                  barColor="linear-gradient(90deg, #c084fc, #facc15)"
+                  barGlow="rgba(192,132,252,0.8)"
+                  label="היכל האלופים"
+                />
+              );
+            })()}
           </div>
 
         </div>

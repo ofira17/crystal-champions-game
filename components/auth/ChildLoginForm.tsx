@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useTransition, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { childLogin } from "@/app/actions/child-auth";
+import { createClient } from "@/lib/supabase/client";
 
 export function ChildLoginForm() {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError]   = useState<string | null>(null);
   const [step, setStep]     = useState<"family" | "pin">("family");
@@ -76,9 +79,16 @@ export function ChildLoginForm() {
         pinRefs[0].current?.focus();
         return;
       }
-      // Navigate to Supabase's own verify endpoint — it sets session
-      // cookies and redirects to /child automatically.
-      window.location.href = result.actionLink;
+      const supabase = createClient();
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        token_hash: result.hashedToken,
+        type: "magiclink",
+      });
+      if (verifyError) {
+        setError("שגיאה בהתחברות — נסה שוב");
+        return;
+      }
+      router.push("/child");
     });
   }
 
