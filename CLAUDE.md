@@ -1,8 +1,98 @@
 @AGENTS.md
 
+## Project Scope Rule (MANDATORY — HIGHEST PRIORITY)
+
+The active project is **ONLY Crystal Champions**.
+
+**Correct project path:** `C:\Users\97253\Desktop\קלוד\crystal-champions`
+
+Do NOT search, edit, inspect, run, or reference:
+- `miti-heroquest`
+- any old Miti Quest folder
+- any other project folder
+
+If a task mentions child home, Daily Goals, dashboard cards, arena, missions, or Crystal Champions assets, always use only:
+`C:\Users\97253\Desktop\קלוד\crystal-champions`
+
+If another project folder appears in search results or terminal context, ignore it and switch back to Crystal Champions.
+
+Do not commit. Do not push. Do not deploy.
+
+## No Approval Loops Rule (MANDATORY)
+
+Do not ask the user for approval or confirmation after every small safe step.
+
+For safe visual/code fixes:
+- Proceed with the requested task
+- Make the minimal needed change
+- Verify with screenshot or TypeScript check
+- Report PASS/FAIL and changed files
+
+Ask the user ONLY before risky actions:
+- Delete files
+- Change DB schema
+- Change RLS/security
+- Expose or request secrets
+- Commit
+- Push
+- Deploy
+- Change production data
+
+Do not commit, push, or deploy.
+
+## Visual QA Rules (MANDATORY — apply to ALL visual work)
+
+### Visual QA Rule
+If a screenshot shows a visual issue, do not mark PASS.
+Screenshot always overrides assumptions, code review, and explanations.
+
+### Image Asset Rule
+Before changing CSS, verify:
+- correct filename
+- transparency (RGBA, no white/checkerboard background)
+- dimensions
+- alpha channel
+
+Only after asset verification may CSS adjustments begin.
+
+### One Change Rule
+Make one visual adjustment at a time.
+Take screenshot.
+Verify.
+Only then continue.
+
+### No Assumptions Rule
+Visual issues must be verified by screenshot.
+Do not infer visual correctness from code.
+
+### Overlay QA Rule
+When positioning counters, progress bars, badges, labels, or overlays:
+temporarily add visible debug outlines,
+take screenshot,
+align precisely,
+remove debug outlines.
+
+### Preview First Rule
+For visual work, create a temporary preview route immediately.
+Do not attempt auth workarounds first.
+Delete preview route after verification.
+
+### Escalation Rule
+After 3 failed visual iterations:
+stop,
+identify root cause,
+explain root cause,
+propose a new approach.
+Do not continue endless micro-adjustments.
+
+### Graphic Card Rule
+Assistant prepares and validates PNG assets first.
+Claude only integrates assets.
+Do not redesign, regenerate, clean, crop, recreate, or modify graphics unless explicitly requested.
+
 ## Permission / Confirmation Rule
 
-For normal safe development tasks, do not ask the user for confirmation after every small code edit. Proceed independently through safe file edits, formatting fixes, UI/CSS tweaks, local build checks, commits, pushes to canonical/main, and production verification.
+For normal safe development tasks, do not ask the user for confirmation after every small code edit. Proceed independently through safe file edits, formatting fixes, UI/CSS tweaks, and local build checks.
 
 Only ask the user before:
 - Deleting files
@@ -12,10 +102,11 @@ Only ask the user before:
 - Installing new packages
 - Making broad unrelated refactors
 - Changing app logic outside the requested fix
+- Committing, pushing, or deploying
 
-For each task: understand the request → make the smallest safe fix → run checks → commit → push to canonical/main → deploy/verify production when required → report only at the end.
+For each task: understand the request → make the smallest safe fix → run checks → report PASS/FAIL and changed files.
 
-Report only: files changed, commit.
+Do not commit, push, or deploy without explicit user instruction.
 
 ## Local Permissions File — Exact Path Rule
 
@@ -385,9 +476,21 @@ vercel redeploy <latest-production-deployment-url> --target production
 ```
 Then verify production chunks changed: fetch https://crystal-champions-game.vercel.app and confirm `/_next/static/chunks/` URLs changed from the previous build. If chunks are identical, the new build is not live — redeploy again.
 
-## Visual QA — Authenticated Pages Screenshot Rule
+## Credentials / Auth QA Rule (CANONICAL — DO NOT violate)
 
-For visual changes on authenticated pages, if `/child` screenshot is blocked by auth, create a temporary local-only preview (e.g., a composite PNG using PIL, or a static HTML in `public/`), capture the real page layout, then delete the temporary code. Do not ask the user to verify manually.
+Never ask the user for passwords, login credentials, tokens, or secrets.
+The user does not provide passwords for visual QA.
+
+If an authenticated page is blocked:
+
+1. Do not ask for credentials.
+2. Create a temporary preview route using the same JSX/CSS needed for verification.
+3. Take screenshot.
+4. Delete the temporary preview route.
+5. Report PASS/FAIL.
+6. List changed files only.
+
+Do not commit. Do not push. Do not deploy.
 
 ## QA Rules
 
@@ -558,6 +661,16 @@ All sprites MUST be RGBA PNGs with a real transparent background.
 ### Do NOT change
 - Question count (20), grade rules, rewards, Supabase, auth, or Vercel config.
 - The worldId hash is no longer used for enemy selection — do not restore it.
+
+## Crystal Forest World — UI Label vs DB Name Mismatch (DO NOT change by label)
+
+The home screen card labelled **`יער הקריסטלים`** does NOT match any `name` column value in the `worlds` table.
+The card maps to the world identified by:
+- `order_index = 1`
+- `world_id = 00000001-0000-0000-0000-000000000001`
+
+**Never** query or reset Crystal Forest progress by searching for the Hebrew string `יער הקריסטלים` in the DB.
+Always use `world_id = 00000001-0000-0000-0000-000000000001` or `order_index = 1` as the lookup key.
 
 ## Asset Transparency Rule (MANDATORY)
 
