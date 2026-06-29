@@ -247,11 +247,14 @@ export default async function ChildHomePage() {
 
         /* -- Shared top-row image card slot -- */
         .top-img-card {
-          padding: 0;
-          overflow: hidden;
-          background: transparent;
-          border: none;
-          box-shadow: none;
+          padding: 0 !important;
+          background: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+          backdrop-filter: none !important;
+          outline: none !important;
+          border-radius: 0 !important;
+          overflow: visible;
         }
         .top-img-card-img {
           width: 100%;
