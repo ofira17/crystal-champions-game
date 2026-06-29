@@ -247,9 +247,11 @@ export default async function ChildHomePage() {
 
         /* -- Shared top-row image card slot -- */
         .top-img-card {
-          padding: 4px;
+          padding: 0;
           overflow: hidden;
-          /* keep the ph-card glass background/border so cards have a consistent frame */
+          background: transparent;
+          border: none;
+          box-shadow: none;
         }
         .top-img-card-img {
           width: 100%;
@@ -646,7 +648,7 @@ export default async function ChildHomePage() {
               <img src="/crystal-shop-card-clean.png" alt="חנות הקריסטלים" className="top-img-card-img" />
             </Link>
             <Link href="/child/leaderboard" className="ph-card ph-card-main top-img-card" aria-label="דירוגים">
-              <img src="/rankings-card-clean.png" alt="דירוגים" className="top-img-card-img" />
+              <img src="/rankings-card.png" alt="דירוגים" className="top-img-card-img" />
             </Link>
           </div>
 
